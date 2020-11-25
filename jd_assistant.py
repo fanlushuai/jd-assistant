@@ -1108,9 +1108,10 @@ class Assistant(object):
             'Host': 'itemko.jd.com',
             'Referer': 'https://item.jd.com/{}.html'.format(sku_id),
         }
-        retry_interval = 0.5
+        retry_interval = 0.1
+        retry_count = 0
 
-        while True:
+        while retry_count < 5:
             resp = self.sess.get(url=url, headers=headers, params=payload)
             resp_json = parse_json(resp.text)
             if resp_json.get('url'):
@@ -1121,8 +1122,12 @@ class Assistant(object):
                 logger.info("抢购链接获取成功: %s", seckill_url)
                 return seckill_url
             else:
+                retry_count+=1
                 logger.info("抢购链接获取失败，%s不是抢购商品或抢购页面暂未刷新，%s秒后重试", sku_id, retry_interval)
                 time.sleep(retry_interval)
+
+        logger.info("抢购链接获取失败，终止抢购！")
+        exit()
 
     @deprecated
     def request_seckill_url(self, sku_id):
@@ -1234,7 +1239,7 @@ class Assistant(object):
         return data
 
     @deprecated
-    def submit_seckill_order(self, sku_id, num=1):
+    def submit_seckill_order(self, sku_id, server_buy_time=int(time.time()), num=1):
         """提交抢购（秒杀）订单
         :param sku_id: 商品id
         :param num: 购买数量，可选参数，默认1个
@@ -1251,7 +1256,7 @@ class Assistant(object):
             'User-Agent': self.user_agent,
             'Host': 'marathon.jd.com',
             'Referer': 'https://marathon.jd.com/seckill/seckill.action?skuId={0}&num={1}&rid={2}'.format(
-                sku_id, num, int(time.time())),
+                sku_id, num, server_buy_time),
         }
 
         resp_json = None
@@ -1282,7 +1287,7 @@ class Assistant(object):
             return False
 
     @deprecated
-    def exec_seckill(self, sku_id, retry=4, interval=4, num=1, fast_mode=True):
+    def exec_seckill(self, sku_id, server_buy_time, retry=4, interval=4, num=1, fast_mode=True):
         """立即抢购
 
         抢购商品的下单流程与普通商品不同，不支持加入购物车，可能需要提前预约，主要执行流程如下：
@@ -1304,7 +1309,7 @@ class Assistant(object):
             if not fast_mode:
                 self.request_seckill_checkout_page(sku_id, num)
 
-            if self.submit_seckill_order(sku_id, num):
+            if self.submit_seckill_order(sku_id, server_buy_time, num):
                 return True
             else:
                 logger.info('休息%ss', interval)
@@ -1314,7 +1319,7 @@ class Assistant(object):
             return False
 
     @deprecated
-    def exec_seckill_by_time(self, sku_ids, buy_time, retry=4, interval=4, num=1, fast_mode=True):
+    def exec_seckill_by_time(self, sku_ids, buy_time, server_buy_time, retry=4, interval=4, num=1, fast_mode=True, sleep_interval=0.5, fast_sleep_interval=0.01):
         """定时抢购
         :param sku_ids: 商品id，多个商品id用逗号进行分割，如"123,456,789"
         :param buy_time: 下单时间，例如：'2018-09-28 22:45:50.000'
@@ -1327,12 +1332,12 @@ class Assistant(object):
         items_dict = parse_sku_id(sku_ids=sku_ids)
         logger.info('准备抢购商品:%s', list(items_dict.keys()))
 
-        t = Timer(buy_time=buy_time)
+        t = Timer(buy_time=buy_time, sleep_interval = sleep_interval, fast_sleep_interval = fast_sleep_interval)
         t.start()
 
         for sku_id in items_dict:
             logger.info('开始抢购商品:%s', sku_id)
-            self.exec_seckill(sku_id, retry, interval, num, fast_mode)
+            self.exec_seckill(sku_id, server_buy_time, retry, interval, num, fast_mode)
 
     @check_login
     def exec_reserve_seckill_by_time(self, sku_id, buy_time, retry=4, interval=4, num=1):

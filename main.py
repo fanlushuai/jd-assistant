@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
+import time
 from jd_assistant import Assistant
 
 if __name__ == '__main__':
@@ -8,11 +9,29 @@ if __name__ == '__main__':
     https://github.com/tychxn/jd-assistant/wiki/1.-%E4%BA%AC%E4%B8%9C%E6%8A%A2%E8%B4%AD%E5%8A%A9%E6%89%8B%E7%94%A8%E6%B3%95
     """
 
-    sku_ids = '100001324422'  # 商品id
-    area = '1_72_4211'  # 区域id
+    sku_ids = '100016553676'  # 商品id
+    # buy_time = '2020-11-25 13:11:20.750'  # 抢购时间
+    buy_time = '2020-11-25 14:59:59.850'  # 真实抢购时间
+    server_buy_timeStr = '2020-11-25 15:00:00.000'  # 传给服务器的抢购时间
+    server_buy_time = int(time.mktime(time.strptime(server_buy_timeStr, "%Y-%m-%d %H:%M:%S.%f")))
+    area = ''  # 区域id
+    retry = 20  # 抢购重复执行次数，可选参数，默认4次
+    interval = 0.04  # 抢购执行间隔，可选参数，默认4秒
+    num = 1  # 购买数量，可选参数，默认1个
+    fast_mode = True  # 快速模式：略过访问抢购订单结算页面这一步骤，默认为 True
+    sleep_interval = 0.5  # 抢购前倒计时轮询时间，默认0.5秒
+    fast_sleep_interval = 0.01  # 抢购5秒内倒计时轮询时间，默认0.01秒
     asst = Assistant()  # 初始化
     asst.login_by_QRcode()  # 扫码登陆
-    asst.buy_item_in_stock(sku_ids=sku_ids, area=area, wait_all=False, stock_interval=5)  # 根据商品是否有货自动下单
+    asst.exec_seckill_by_time(sku_ids=sku_ids, buy_time=buy_time, server_buy_time=server_buy_time, retry=retry, interval=interval, num=num, fast_mode=fast_mode, sleep_interval=sleep_interval, fast_sleep_interval=fast_sleep_interval)
+
+
+
+
+
+
+
+    # 根据商品是否有货自动下单
     # 6个参数：
     # sku_ids: 商品id。可以设置多个商品，也可以带数量，如：'1234' 或 '1234,5678' 或 '1234:2' 或 '1234:2,5678:3'
     # area: 地区id
