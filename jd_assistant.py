@@ -1087,7 +1087,7 @@ class Assistant(object):
             logger.error(e)
 
     @deprecated
-    def _get_seckill_url(self, sku_id):
+    def _get_seckill_url(self, sku_id, server_buy_time=int(time.time())):
         """获取商品的抢购链接
 
         点击"抢购"按钮后，会有两次302跳转，最后到达订单结算页面
@@ -1101,7 +1101,7 @@ class Assistant(object):
             'callback': 'jQuery{}'.format(random.randint(1000000, 9999999)),
             'skuId': sku_id,
             'from': 'pc',
-            '_': str(int(time.time() * 1000)),
+            '_': str(server_buy_time * 1000),
         }
         headers = {
             'User-Agent': self.user_agent,
@@ -1111,7 +1111,7 @@ class Assistant(object):
         retry_interval = 0.1
         retry_count = 0
 
-        while retry_count < 5:
+        while retry_count < 10:
             resp = self.sess.get(url=url, headers=headers, params=payload)
             resp_json = parse_json(resp.text)
             if resp_json.get('url'):
@@ -1130,13 +1130,13 @@ class Assistant(object):
         exit()
 
     @deprecated
-    def request_seckill_url(self, sku_id):
+    def request_seckill_url(self, sku_id, server_buy_time):
         """访问商品的抢购链接（用于设置cookie等）
         :param sku_id: 商品id
         :return:
         """
         if not self.seckill_url.get(sku_id):
-            self.seckill_url[sku_id] = self._get_seckill_url(sku_id)
+            self.seckill_url[sku_id] = self._get_seckill_url(sku_id, server_buy_time)
         headers = {
             'User-Agent': self.user_agent,
             'Host': 'marathon.jd.com',
@@ -1305,7 +1305,7 @@ class Assistant(object):
         for count in range(1, retry + 1):
             logger.info('第[%s/%s]次尝试抢购商品:%s', count, retry, sku_id)
 
-            self.request_seckill_url(sku_id)
+            self.request_seckill_url(sku_id, server_buy_time)
             if not fast_mode:
                 self.request_seckill_checkout_page(sku_id, num)
 

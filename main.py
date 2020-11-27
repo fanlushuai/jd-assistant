@@ -9,14 +9,13 @@ if __name__ == '__main__':
     https://github.com/tychxn/jd-assistant/wiki/1.-%E4%BA%AC%E4%B8%9C%E6%8A%A2%E8%B4%AD%E5%8A%A9%E6%89%8B%E7%94%A8%E6%B3%95
     """
 
-    sku_ids = '100016553676'  # 商品id
-    # buy_time = '2020-11-25 13:11:20.750'  # 抢购时间
-    buy_time = '2020-11-25 14:59:59.850'  # 真实抢购时间
-    server_buy_timeStr = '2020-11-25 15:00:00.000'  # 传给服务器的抢购时间
+    sku_ids = '100015589520'  # 商品id
+    buy_time = '2020-11-28 12:59:59.950'  # 真实抢购时间
+    server_buy_timeStr = '2020-11-28 13:00:00.000'  # 传给服务器的抢购时间
     server_buy_time = int(time.mktime(time.strptime(server_buy_timeStr, "%Y-%m-%d %H:%M:%S.%f")))
     area = ''  # 区域id
-    retry = 20  # 抢购重复执行次数，可选参数，默认4次
-    interval = 0.04  # 抢购执行间隔，可选参数，默认4秒
+    retry = 50  # 抢购重复执行次数，可选参数，默认4次
+    interval = 0.1  # 抢购执行间隔，可选参数，默认4秒
     num = 1  # 购买数量，可选参数，默认1个
     fast_mode = True  # 快速模式：略过访问抢购订单结算页面这一步骤，默认为 True
     sleep_interval = 0.5  # 抢购前倒计时轮询时间，默认0.5秒
