@@ -10,7 +10,7 @@ if __name__ == '__main__':
     """
 
     # 预约抢购
-    sku_ids = '100015589520'  # 商品id
+    sku_id = '100015589520'  # 商品id
     buy_time = '2020-11-28 12:59:59.950'  # 开始抢购时间，格式：'2020-11-28 12:59:59.950'，建议设置提前0.050秒，如果网络慢可根据自己网络情况适当修改
     retry = 20  # 抢购重复执行次数，可选参数，默认4次
     interval = 0.01  # 抢购执行间隔，可选参数，默认4秒
@@ -21,7 +21,7 @@ if __name__ == '__main__':
     asst = Assistant()  # 初始化
     asst.login_by_QRcode()  # 扫码登陆
     # 抢购前一定要确保购物车里只有该商品，且只有一件
-    asst.exec_reserve_seckill_by_time(sku_ids=sku_ids, buy_time=buy_time, retry=retry, interval=interval, num=num, is_pass_cart=is_pass_cart, sleep_interval=sleep_interval, fast_sleep_interval=fast_sleep_interval)
+    asst.exec_reserve_seckill_by_time(sku_id=sku_id, buy_time=buy_time, retry=retry, interval=interval, num=num, is_pass_cart=is_pass_cart, sleep_interval=sleep_interval, fast_sleep_interval=fast_sleep_interval)
 
 
     # 定时抢购【注：不是预约抢购！！！这两个流程不一样】
