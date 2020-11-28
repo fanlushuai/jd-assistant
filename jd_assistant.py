@@ -9,6 +9,7 @@ import time
 
 import requests
 from bs4 import BeautifulSoup
+from datetime import datetime, timedelta
 
 from config import global_config
 from exception import AsstException
@@ -45,7 +46,7 @@ class Assistant(object):
         self.fp = global_config.get('config', 'fp')
         self.track_id = global_config.get('config', 'track_id')
         self.risk_control = global_config.get('config', 'risk_control')
-        if not self.eid or not self.fp or not self.track_id or not self.risk_control:
+        if not self.eid or not self.fp or not self.track_id:
             raise AsstException('请在 config.ini 中配置 eid, fp, track_id, risk_control 参数，具体请参考 wiki-常见问题')
 
         self.timeout = float(global_config.get('config', 'timeout') or DEFAULT_TIMEOUT)
@@ -1123,11 +1124,11 @@ class Assistant(object):
                 return seckill_url
             else:
                 retry_count+=1
-                logger.info("抢购链接获取失败，%s不是抢购商品或抢购页面暂未刷新，%s秒后重试", sku_id, retry_interval)
+                logger.info("第%s次获取抢购链接失败，%s不是抢购商品或抢购页面暂未刷新，%s秒后重试", retry_count, sku_id, retry_interval)
                 time.sleep(retry_interval)
 
         logger.info("抢购链接获取失败，终止抢购！")
-        exit()
+        exit(-1)
 
     @deprecated
     def request_seckill_url(self, sku_id, server_buy_time):
@@ -1319,7 +1320,7 @@ class Assistant(object):
             return False
 
     @deprecated
-    def exec_seckill_by_time(self, sku_ids, buy_time, server_buy_time, retry=4, interval=4, num=1, fast_mode=True, sleep_interval=0.5, fast_sleep_interval=0.01):
+    def exec_seckill_by_time(self, sku_ids, buy_time=None, sku_buy_time=None, retry=4, interval=4, num=1, fast_mode=True, sleep_interval=0.5, fast_sleep_interval=0.01):
         """定时抢购
         :param sku_ids: 商品id，多个商品id用逗号进行分割，如"123,456,789"
         :param buy_time: 下单时间，例如：'2018-09-28 22:45:50.000'
@@ -1331,8 +1332,20 @@ class Assistant(object):
         """
         items_dict = parse_sku_id(sku_ids=sku_ids)
         logger.info('准备抢购商品:%s', list(items_dict.keys()))
+        server_buy_time = None
+        realy_buy_time = None
 
-        t = Timer(buy_time=buy_time, sleep_interval = sleep_interval, fast_sleep_interval = fast_sleep_interval)
+        if sku_buy_time is None:
+            exit(-1)
+        else:
+            server_buy_datetime = datetime.strptime(sku_buy_time, "%Y-%m-%d %H:%M:%S.%f")
+            server_buy_time = int(server_buy_datetime.timetuple())
+            if buy_time is None:
+                realy_buy_time = (server_buy_datetime + timedelta(milliseconds=-50)).strftime("%Y-%m-%d %H:%M:%S.%f")
+            else:
+                realy_buy_time = buy_time
+
+        t = Timer(buy_time=realy_buy_time, sleep_interval=sleep_interval, fast_sleep_interval=fast_sleep_interval)
         t.start()
 
         for sku_id in items_dict:
@@ -1340,7 +1353,7 @@ class Assistant(object):
             self.exec_seckill(sku_id, server_buy_time, retry, interval, num, fast_mode)
 
     @check_login
-    def exec_reserve_seckill_by_time(self, sku_id, buy_time, retry=4, interval=4, num=1):
+    def exec_reserve_seckill_by_time(self, sku_id, buy_time=None, retry=4, interval=4, num=1, is_pass_cart=True, sleep_interval=0.5, fast_sleep_interval=0.01):
         """定时抢购`预约抢购商品`
 
         预约抢购商品特点：
@@ -1359,10 +1372,14 @@ class Assistant(object):
         :return:
         """
 
-        t = Timer(buy_time=buy_time)
+        if buy_time is None:
+            exit(-1)
+
+        t = Timer(buy_time=buy_time, sleep_interval=sleep_interval, fast_sleep_interval=fast_sleep_interval)
         t.start()
 
-        self.add_item_to_cart(sku_ids={sku_id: num})
+        if is_pass_cart is not True:
+            self.add_item_to_cart(sku_ids={sku_id: num})
 
         for count in range(1, retry + 1):
             logger.info('第[%s/%s]次尝试提交订单', count, retry)
