@@ -15,12 +15,12 @@ if __name__ == '__main__':
     retry = 20  # 抢购重复执行次数，可选参数，默认4次
     interval = 0.01  # 抢购执行间隔，可选参数，默认4秒
     num = 1  # 购买数量，可选参数，默认1个
-    is_pass_cart = True  # 是否跳过添加购物车，需要自行提前添加该商品，默认True
+    is_pass_cart = False  # 是否跳过添加购物车，需要根据预约类型判断，默认False
     sleep_interval = 0.5  # 抢购前倒计时轮询时间，默认0.5秒
     fast_sleep_interval = 0.01  # 抢购5秒内倒计时轮询时间，默认0.01秒
     asst = Assistant()  # 初始化
     asst.login_by_QRcode()  # 扫码登陆
-    # 抢购前一定要确保购物车里只有该商品，且只有一件
+    # 抢购前一定要确保购物车里没有其他商品，否则会一同下单
     asst.exec_reserve_seckill_by_time(sku_id=sku_id, buy_time=buy_time, retry=retry, interval=interval, num=num, is_pass_cart=is_pass_cart, sleep_interval=sleep_interval, fast_sleep_interval=fast_sleep_interval)
 
 

@@ -61,5 +61,9 @@ class Timer(object):
         tm_year, tm_mon, tm_mday, tm_hour, tm_min, tm_sec, tm_wday, tm_yday, tm_isdst = time.gmtime(
             time.mktime(dt.timetuple()))
         msec = dt.microsecond / 1000
-        win32api.SetSystemTime(tm_year, tm_mon, tm_wday, tm_mday, tm_hour, tm_min, tm_sec, int(msec))
-        logger.info('已同步京东服务器时间：%s' % dt)
+        try:
+            win32api.SetSystemTime(tm_year, tm_mon, tm_wday, tm_mday, tm_hour, tm_min, tm_sec, int(msec))
+            logger.info('已同步京东服务器时间：%s' % dt)
+        except Exception as e:
+            logger.error('同步京东服务器时间失败：%s' % dt)
+            logger.error(e)

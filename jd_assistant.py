@@ -644,17 +644,30 @@ class Assistant(object):
                 'pcount': count,
                 'ptype': 1,
             }
-            resp = self.sess.get(url=url, params=payload, headers=headers)
-            if 'https://cart.jd.com/cart.action' in resp.url:  # 套装商品加入购物车后直接跳转到购物车页面
-                result = True
-            else:  # 普通商品成功加入购物车后会跳转到提示 "商品已成功加入购物车！" 页面
-                soup = BeautifulSoup(resp.text, "html.parser")
-                result = bool(soup.select('h3.ftx-02'))  # [<h3 class="ftx-02">商品已成功加入购物车！</h3>]
 
-            if result:
-                logger.info('%s x %s 已成功加入购物车', sku_id, count)
-            else:
-                logger.error('%s 添加到购物车失败', sku_id)
+            i = 0
+            while i < 3:
+                try:
+                    resp = self.sess.get(url=url, params=payload, headers=headers, timeout=(0.1, 0.08))
+                    if 'https://cart.jd.com/cart.action' in resp.url:  # 套装商品加入购物车后直接跳转到购物车页面
+                        result = True
+                    else:  # 普通商品成功加入购物车后会跳转到提示 "商品已成功加入购物车！" 页面
+                        soup = BeautifulSoup(resp.text, "html.parser")
+                        result = bool(soup.select('h3.ftx-02'))  # [<h3 class="ftx-02">商品已成功加入购物车！</h3>]
+
+                    if result:
+                        logger.info('%s x %s 已成功加入购物车', sku_id, count)
+                        break
+                    else:
+                        i += 1
+                        logger.error('%s 添加到购物车失败，开始第 %s 次重试', sku_id, i)
+                        logger.error('响应数据：%s', resp)
+                except requests.exceptions.ConnectTimeout as e:
+                    i += 1
+                    logger.error('%s 添加到购物车请求发送超时，开始第 %s 次重试', sku_id, i)
+                except requests.exceptions.ReadTimeout as e:
+                    logger.error('%s 添加到购物车请求响应超时，忽略，继续执行', sku_id)
+                    break
 
     @check_login
     def clear_cart(self):
@@ -931,6 +944,8 @@ class Assistant(object):
 
         try:
             resp = self.sess.post(url=url, data=data, headers=headers)
+            # 暂时不设置超时时间
+            # resp = self.sess.post(url=url, data=data, headers=headers, timeout=(0.1, 0.08))
             resp_json = json.loads(resp.text)
 
             # 返回信息示例：
@@ -1353,7 +1368,7 @@ class Assistant(object):
             self.exec_seckill(sku_id, server_buy_time, retry, interval, num, fast_mode)
 
     @check_login
-    def exec_reserve_seckill_by_time(self, sku_id, buy_time=None, retry=4, interval=4, num=1, is_pass_cart=True, sleep_interval=0.5, fast_sleep_interval=0.01):
+    def exec_reserve_seckill_by_time(self, sku_id, buy_time=None, retry=4, interval=4, num=1, is_pass_cart=False, sleep_interval=0.5, fast_sleep_interval=0.01):
         """定时抢购`预约抢购商品`
 
         预约抢购商品特点：
@@ -1380,6 +1395,7 @@ class Assistant(object):
 
         if is_pass_cart is not True:
             self.add_item_to_cart(sku_ids={sku_id: num})
+            # gevent.joinall([gevent.spawn(self.add_item_to_cart(sku_ids={sku_id: num}))])
 
         for count in range(1, retry + 1):
             logger.info('第[%s/%s]次尝试提交订单', count, retry)
