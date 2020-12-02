@@ -820,7 +820,7 @@ class Assistant(object):
             'rid': str(int(time.time() * 1000)),
         }
         try:
-            resp = self.sess.get(url=url, params=payload)
+            resp = self.sess.get(url=url, params=payload, timeout=(0.1, 0.08))
             if not response_status(resp):
                 logger.error('获取订单结算页信息失败')
                 return
@@ -1124,11 +1124,11 @@ class Assistant(object):
             'Host': 'itemko.jd.com',
             'Referer': 'https://item.jd.com/{}.html'.format(sku_id),
         }
-        retry_interval = 0.1
+        retry_interval = 0.05
         retry_count = 0
 
         while retry_count < 10:
-            resp = self.sess.get(url=url, headers=headers, params=payload)
+            resp = self.sess.get(url=url, headers=headers, params=payload, timeout=(0.1, 0.08))
             resp_json = parse_json(resp.text)
             if resp_json.get('url'):
                 # https://divide.jd.com/user_routing?skuId=8654289&sn=c3f4ececd8461f0e4d7267e96a91e0e0&from=pc
@@ -1158,7 +1158,7 @@ class Assistant(object):
             'Host': 'marathon.jd.com',
             'Referer': 'https://item.jd.com/{}.html'.format(sku_id),
         }
-        self.sess.get(url=self.seckill_url.get(sku_id), headers=headers, allow_redirects=False)
+        self.sess.get(url=self.seckill_url.get(sku_id), headers=headers, allow_redirects=False, timeout=(0.1, 0.08))
 
     @deprecated
     def request_seckill_checkout_page(self, sku_id, num=1):
@@ -1178,7 +1178,7 @@ class Assistant(object):
             'Host': 'marathon.jd.com',
             'Referer': 'https://item.jd.com/{}.html'.format(sku_id),
         }
-        self.sess.get(url=url, params=payload, headers=headers)
+        self.sess.get(url=url, params=payload, headers=headers, timeout=(0.1, 0.08))
 
     @deprecated
     def _get_seckill_init_info(self, sku_id, num=1):
@@ -1275,32 +1275,39 @@ class Assistant(object):
                 sku_id, num, server_buy_time),
         }
 
-        resp_json = None
-        try:
-            resp = self.sess.post(url=url, headers=headers, params=payload,
-                                  data=self.seckill_order_data.get(sku_id), timeout=5)
-            logger.info(resp.text)
-            resp_json = parse_json(resp.text)
-        except Exception as e:
-            logger.error('秒杀请求出错：%s', str(e))
-            return False
-        # 返回信息
-        # 抢购失败：
-        # {'errorMessage': '很遗憾没有抢到，再接再厉哦。', 'orderId': 0, 'resultCode': 60074, 'skuId': 0, 'success': False}
-        # {'errorMessage': '抱歉，您提交过快，请稍后再提交订单！', 'orderId': 0, 'resultCode': 60017, 'skuId': 0, 'success': False}
-        # {'errorMessage': '系统正在开小差，请重试~~', 'orderId': 0, 'resultCode': 90013, 'skuId': 0, 'success': False}
-        # 抢购成功：
-        # {"appUrl":"xxxxx","orderId":820227xxxxx,"pcUrl":"xxxxx","resultCode":0,"skuId":0,"success":true,"totalMoney":"xxxxx"}
+        retry_interval = 0.1
+        retry_count = 0
 
-        if resp_json.get('success'):
-            order_id = resp_json.get('orderId')
-            total_money = resp_json.get('totalMoney')
-            pay_url = 'https:' + resp_json.get('pcUrl')
-            logger.info('抢购成功，订单号: %s, 总价: %s, 电脑端付款链接: %s', order_id, total_money, pay_url)
-            return True
-        else:
-            logger.info('抢购失败，返回信息: %s', resp_json)
-            return False
+        while retry_count < 10:
+            resp_json = None
+            try:
+                resp = self.sess.post(url=url, headers=headers, params=payload,
+                                      data=self.seckill_order_data.get(sku_id), timeout=(0.1, 0.08))
+                logger.info(resp.text)
+                resp_json = parse_json(resp.text)
+            except Exception as e:
+                logger.error('秒杀请求出错：%s', str(e))
+                retry_count+=1
+                time.sleep(retry_interval)
+            # 返回信息
+            # 抢购失败：
+            # {'errorMessage': '很遗憾没有抢到，再接再厉哦。', 'orderId': 0, 'resultCode': 60074, 'skuId': 0, 'success': False}
+            # {'errorMessage': '抱歉，您提交过快，请稍后再提交订单！', 'orderId': 0, 'resultCode': 60017, 'skuId': 0, 'success': False}
+            # {'errorMessage': '系统正在开小差，请重试~~', 'orderId': 0, 'resultCode': 90013, 'skuId': 0, 'success': False}
+            # 抢购成功：
+            # {"appUrl":"xxxxx","orderId":820227xxxxx,"pcUrl":"xxxxx","resultCode":0,"skuId":0,"success":true,"totalMoney":"xxxxx"}
+
+            if resp_json.get('success'):
+                order_id = resp_json.get('orderId')
+                total_money = resp_json.get('totalMoney')
+                pay_url = 'https:' + resp_json.get('pcUrl')
+                logger.info('抢购成功，订单号: %s, 总价: %s, 电脑端付款链接: %s', order_id, total_money, pay_url)
+                return True
+            else:
+                logger.info('抢购失败，返回信息: %s', resp_json)
+                retry_count+=1
+                time.sleep(retry_interval)
+        return False
 
     @deprecated
     def exec_seckill(self, sku_id, server_buy_time, retry=4, interval=4, num=1, fast_mode=True):
@@ -1318,10 +1325,12 @@ class Assistant(object):
         :param fast_mode: 快速模式：略过访问抢购订单结算页面这一步骤，默认为 True
         :return: 抢购结果 True/False
         """
+
+        self.request_seckill_url(sku_id, server_buy_time)
+
         for count in range(1, retry + 1):
             logger.info('第[%s/%s]次尝试抢购商品:%s', count, retry, sku_id)
 
-            self.request_seckill_url(sku_id, server_buy_time)
             if not fast_mode:
                 self.request_seckill_checkout_page(sku_id, num)
 
@@ -1398,6 +1407,9 @@ class Assistant(object):
         if is_pass_cart is not True:
             self.add_item_to_cart(sku_ids={sku_id: num})
             # gevent.joinall([gevent.spawn(self.add_item_to_cart(sku_ids={sku_id: num}))])
+
+        # 获取订单结算页面信息（后台可能会自动勾选默认地址）
+        self.get_checkout_page_detail()
 
         for count in range(1, retry + 1):
             logger.info('第[%s/%s]次尝试提交订单', count, retry)
