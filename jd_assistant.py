@@ -1368,8 +1368,10 @@ class Assistant(object):
             self.exec_seckill(sku_id, server_buy_time, retry, interval, num, fast_mode)
 
     @check_login
-    def exec_reserve_seckill_by_time(self, sku_id, buy_time=None, retry=4, interval=4, num=1, is_pass_cart=False, sleep_interval=0.5, fast_sleep_interval=0.01):
+    def exec_reserve_seckill_by_time(self, sku_id, buy_time=None, retry=4, interval=4, num=1, is_pass_cart=True, sleep_interval=0.5, fast_sleep_interval=0.01):
         """定时抢购`预约抢购商品`
+
+        一定要确保预约的商品在购物车中才能使用这种方式！！！否则只能用其他方式
 
         预约抢购商品特点：
             1.需要提前点击预约
