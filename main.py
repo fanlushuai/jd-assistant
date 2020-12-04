@@ -19,7 +19,8 @@ if __name__ == '__main__':
     fast_sleep_interval = 0.01  # 抢购5秒内倒计时轮询时间，默认0.01秒
 
     # 配置【预约抢购，自动加入购物车】
-    is_pass_cart = True  # 是否跳过添加购物车，默认True
+    # 注意：一定要在抢购开始前手动清空购物车中此类无法勾选的商品！（因为脚本在执行清空购物车操作时，无法清空不能勾选的商品）
+    is_pass_cart = False  # 是否跳过添加购物车，默认False
 
 
     # 配置【预约抢购，不会自动加入购物车】
@@ -33,7 +34,7 @@ if __name__ == '__main__':
     asst.login_by_QRcode()  # 扫码登陆
 
 
-    # 执行【预约抢购，自动加入购物车】 一定要确保预约的商品在购物车中才能使用这种方式！！！否则只能用其他方式
+    # 执行【预约抢购，自动加入购物车】 手动清空自动添加到购物车的
     asst.exec_reserve_seckill_by_time(sku_id=sku_id, buy_time=buy_time, retry=retry, interval=interval, num=num, is_pass_cart=is_pass_cart, sleep_interval=sleep_interval, fast_sleep_interval=fast_sleep_interval)
 
 

@@ -819,35 +819,46 @@ class Assistant(object):
         payload = {
             'rid': str(int(time.time() * 1000)),
         }
-        try:
-            resp = self.sess.get(url=url, params=payload, timeout=(0.1, 0.08))
-            if not response_status(resp):
-                logger.error('获取订单结算页信息失败')
-                return
 
-            soup = BeautifulSoup(resp.text, "html.parser")
-            self.risk_control = get_tag_value(soup.select('input#riskControl'), 'value')
+        i = 0
+        while i < 3:
+            try:
+                resp = self.sess.get(url=url, params=payload, timeout=(0.1, 0.08))
+                if not response_status(resp):
+                    logger.error('获取订单结算页信息失败')
+                    return
 
-            order_detail = {
-                'address': soup.find('span', id='sendAddr').text[5:],  # remove '寄送至： ' from the begin
-                'receiver': soup.find('span', id='sendMobile').text[4:],  # remove '收件人:' from the begin
-                'total_price': soup.find('span', id='sumPayPriceId').text[1:],  # remove '￥' from the begin
-                'items': []
-            }
-            # TODO: 这里可能会产生解析问题，待修复
-            # for item in soup.select('div.goods-list div.goods-items'):
-            #     div_tag = item.select('div.p-price')[0]
-            #     order_detail.get('items').append({
-            #         'name': get_tag_value(item.select('div.p-name a')),
-            #         'price': get_tag_value(div_tag.select('strong.jd-price'))[2:],  # remove '￥ ' from the begin
-            #         'num': get_tag_value(div_tag.select('span.p-num'))[1:],  # remove 'x' from the begin
-            #         'state': get_tag_value(div_tag.select('span.p-state'))  # in stock or out of stock
-            #     })
+                soup = BeautifulSoup(resp.text, "html.parser")
+                self.risk_control = get_tag_value(soup.select('input#riskControl'), 'value')
 
-            logger.info("下单信息：%s", order_detail)
-            return order_detail
-        except Exception as e:
-            logger.error('订单结算页面数据解析异常（可以忽略），报错信息：%s', e)
+                order_detail = {
+                    'address': soup.find('span', id='sendAddr').text[5:],  # remove '寄送至： ' from the begin
+                    'receiver': soup.find('span', id='sendMobile').text[4:],  # remove '收件人:' from the begin
+                    'total_price': soup.find('span', id='sumPayPriceId').text[1:],  # remove '￥' from the begin
+                    'items': []
+                }
+                # TODO: 这里可能会产生解析问题，待修复
+                # for item in soup.select('div.goods-list div.goods-items'):
+                #     div_tag = item.select('div.p-price')[0]
+                #     order_detail.get('items').append({
+                #         'name': get_tag_value(item.select('div.p-name a')),
+                #         'price': get_tag_value(div_tag.select('strong.jd-price'))[2:],  # remove '￥ ' from the begin
+                #         'num': get_tag_value(div_tag.select('span.p-num'))[1:],  # remove 'x' from the begin
+                #         'state': get_tag_value(div_tag.select('span.p-state'))  # in stock or out of stock
+                #     })
+
+                logger.info("下单信息：%s", order_detail)
+                return order_detail
+            except requests.exceptions.ConnectTimeout as e:
+                i += 1
+                logger.error('订单结算页面数据连接超时，开始第 %s 次重试', i)
+            except requests.exceptions.ReadTimeout as e:
+                logger.error('订单结算页面数据获取超时（可以忽略），报错信息：%s', e)
+                break
+            except Exception as e:
+                logger.error('订单结算页面数据解析异常（可以忽略），报错信息：%s', e)
+                logger.error('resp.text：%s', resp.text)
+                break
 
     def _save_invoice(self):
         """下单第三方商品时如果未设置发票，将从电子发票切换为普通发票
@@ -1377,7 +1388,7 @@ class Assistant(object):
             self.exec_seckill(sku_id, server_buy_time, retry, interval, num, fast_mode)
 
     @check_login
-    def exec_reserve_seckill_by_time(self, sku_id, buy_time=None, retry=4, interval=4, num=1, is_pass_cart=True, sleep_interval=0.5, fast_sleep_interval=0.01):
+    def exec_reserve_seckill_by_time(self, sku_id, buy_time=None, retry=4, interval=4, num=1, is_pass_cart=False, sleep_interval=0.5, fast_sleep_interval=0.01):
         """定时抢购`预约抢购商品`
 
         一定要确保预约的商品在购物车中才能使用这种方式！！！否则只能用其他方式
@@ -1400,6 +1411,9 @@ class Assistant(object):
 
         if buy_time is None:
             exit(-1)
+
+        # 开抢前清空购物车
+        self.clear_cart()
 
         t = Timer(buy_time=buy_time, sleep_interval=sleep_interval, fast_sleep_interval=fast_sleep_interval)
         t.start()
