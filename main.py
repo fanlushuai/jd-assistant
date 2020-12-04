@@ -10,8 +10,8 @@ if __name__ == '__main__':
     """
 
     # 抢购通用配置
-    sku_id = '100016553676'  # 商品id
-    buy_time = '2020-12-01 14:59:59.950'  # 开始抢购时间，格式：'2020-11-28 12:59:59.950'，建议设置提前0.050秒，如果网络慢可根据自己网络情况适当修改
+    sku_id = '100015521004'  # 商品id
+    buy_time = '2020-12-04 14:59:59.950'  # 开始抢购时间，格式：'2020-11-28 12:59:59.950'，建议设置提前0.050秒，如果网络慢可根据自己网络情况适当修改
     retry = 5  # 抢购重复执行次数，可选参数，默认4次
     interval = 0.01  # 抢购执行间隔，可选参数，默认4秒
     num = 1  # 购买数量，可选参数，默认1个
@@ -22,6 +22,13 @@ if __name__ == '__main__':
     is_pass_cart = True  # 是否跳过添加购物车，默认True
 
 
+    # 配置【预约抢购，不会自动加入购物车】
+    # area = '19_1607_3155_62117'  # 区域id
+    # sku_buy_time = '2020-12-04 15:00:00.000'  # 商品抢购时间
+    # buy_time = None  # 开始抢购时间，默认为None，自动提前0.050秒，网络通畅时不需要修改，如果网络慢可根据自己情况适当修改，格式：'2020-11-28 12:59:59.950'
+    # fast_mode = True  # 快速模式：略过访问抢购订单结算页面这一步骤，默认为 True
+
+
     asst = Assistant()  # 初始化
     asst.login_by_QRcode()  # 扫码登陆
 
@@ -30,14 +37,21 @@ if __name__ == '__main__':
     asst.exec_reserve_seckill_by_time(sku_id=sku_id, buy_time=buy_time, retry=retry, interval=interval, num=num, is_pass_cart=is_pass_cart, sleep_interval=sleep_interval, fast_sleep_interval=fast_sleep_interval)
 
 
-    # 配置【预约抢购，不会自动加入购物车】
-    # area = ''  # 区域id
-    # sku_buy_time = '2020-11-28 13:00:00.000'  # 商品抢购时间
-    # buy_time = None  # 开始抢购时间，默认为None，自动提前0.050秒，网络通畅时不需要修改，如果网络慢可根据自己情况适当修改，格式：'2020-11-28 12:59:59.950'
-    # fast_mode = True  # 快速模式：略过访问抢购订单结算页面这一步骤，默认为 True
-
     # 执行【预约抢购，不会自动加入购物车】
     # asst.exec_seckill_by_time(sku_ids=sku_id, buy_time=buy_time, sku_buy_time=sku_buy_time, retry=retry, interval=interval, num=num, fast_mode=fast_mode, sleep_interval=sleep_interval, fast_sleep_interval=fast_sleep_interval)
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
     # 根据商品是否有货自动下单

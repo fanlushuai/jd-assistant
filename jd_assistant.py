@@ -1363,7 +1363,7 @@ class Assistant(object):
             exit(-1)
         else:
             server_buy_datetime = datetime.strptime(sku_buy_time, "%Y-%m-%d %H:%M:%S.%f")
-            server_buy_time = int(server_buy_datetime.timetuple())
+            server_buy_time = int(time.mktime(server_buy_datetime.timetuple()))
             if buy_time is None:
                 realy_buy_time = (server_buy_datetime + timedelta(milliseconds=-50)).strftime("%Y-%m-%d %H:%M:%S.%f")
             else:
