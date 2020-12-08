@@ -10,17 +10,25 @@ from log import logger
 
 class Timer(object):
 
-    def __init__(self, buy_time, sleep_interval=0.5, fast_sleep_interval=0.01):
+    def __init__(self, buy_time, sleep_interval=0.5, fast_sleep_interval=0.01, sync_time_before_seconds=15):
         self.buy_time = self.datetime_to_timestamp(datetime.strptime(buy_time, '%Y-%m-%d %H:%M:%S.%f'))
         self.modify_buy_time()
         self.fast_buy_time = self.buy_time + 5 * 1000
         self.sleep_interval = sleep_interval
         self.fast_sleep_interval = fast_sleep_interval
+        self.sync_time_before_seconds = sync_time_before_seconds
 
     def start(self):
         logger.info('正在等待到达设定时间：%s' % self.buy_time)
+        not_sync_time_before_buy = True
         while True:
             local_time_stamp_13_float = self.get_local_time_stamp_13_float()
+            if local_time_stamp_13_float > self.buy_time - self.sync_time_before_seconds * 1000:
+                if not_sync_time_before_buy:
+                    self.modify_buy_time()
+                    logger.info("临近时间节点再次同步服务器时间")
+                    not_sync_time_before_buy = False
+
             if local_time_stamp_13_float >= self.buy_time:
                 logger.info('时间到达，开始执行……')
                 break
@@ -37,7 +45,7 @@ class Timer(object):
         diff_time = self.get_diff_time()
         local_sync_buy_time = local_buy_time - diff_time
 
-        logger.info('time user required:  %s  time after sync %s diff time %s', self.buy_time, local_sync_buy_time,
+        logger.info('time require:  %s  after sync: %s diff: %s', self.buy_time, local_sync_buy_time,
                     diff_time)
         self.buy_time = local_sync_buy_time
 
