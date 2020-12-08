@@ -1,69 +1,91 @@
 # -*- coding:utf-8 -*-
-import time
 import json
-import win32api
-import ctypes, sys
+import time
+from datetime import datetime
+
 import requests
-from datetime import datetime, timedelta
 
 from log import logger
 
 
-def is_admin():
-    try:
-        # 获取当前用户的是否为管理员
-        return ctypes.windll.shell32.IsUserAnAdmin()
-    except:
-        return False
-
 class Timer(object):
 
     def __init__(self, buy_time, sleep_interval=0.5, fast_sleep_interval=0.01):
-
-        if not is_admin():
-            # 重新运行这个程序使用管理员权限
-            ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, __file__, None, 1)
-        # 同步京东服务器时间
-        self.setSystemTime()
-
-        # '2018-09-28 22:45:50.000'
-        self.buy_time = datetime.strptime(buy_time, "%Y-%m-%d %H:%M:%S.%f")
-        self.fast_buy_time = self.buy_time + timedelta(seconds=-5)
+        self.buy_time = self.datetime_to_timestamp(datetime.strptime(buy_time, '%Y-%m-%d %H:%M:%S.%f'))
+        self.modify_buy_time()
+        self.fast_buy_time = self.buy_time + 5 * 1000
         self.sleep_interval = sleep_interval
         self.fast_sleep_interval = fast_sleep_interval
 
     def start(self):
         logger.info('正在等待到达设定时间：%s' % self.buy_time)
-        now_time = datetime.now
+        local_time_stamp_13_float = self.get_local_time_stamp_13_float()
         while True:
-            if now_time() >= self.buy_time:
+            if local_time_stamp_13_float >= self.buy_time:
                 logger.info('时间到达，开始执行……')
                 break
             else:
-                if now_time() >= self.fast_buy_time:
+                if local_time_stamp_13_float >= self.fast_buy_time:
                     time.sleep(self.fast_sleep_interval)
                 else:
                     time.sleep(self.sleep_interval)
 
-    def setSystemTime(self):
-        url = 'https://a.jd.com//ajax/queryServerData.html'
+    def modify_buy_time(self):
+        # 根据服务器和本地时间的差值，来修改本地时间设置的抢购时间
+        local_buy_time = self.buy_time
+        # 注意，diff=本地-京东的
+        diff_time = self.get_diff_time()
+        local_sync_buy_time = local_buy_time - diff_time
 
-        session = requests.session()
+        logger.info('time user required:  %s  time after sync %s diff time %s', self.buy_time, local_sync_buy_time,
+                    diff_time)
+        self.buy_time = local_sync_buy_time
 
-        # get server time
-        t0 = datetime.now()
-        ret = session.get(url).text
-        t1 = datetime.now()
+    def get_diff_time(self):
+        # 获取    本地时间 （减去）  京东服务器时间  的差值
 
-        js = json.loads(ret)
-        t = float(js["serverTime"]) / 1000
-        dt = datetime.fromtimestamp(t) + ((t1 - t0) / 2)
-        tm_year, tm_mon, tm_mday, tm_hour, tm_min, tm_sec, tm_wday, tm_yday, tm_isdst = time.gmtime(
-            time.mktime(dt.timetuple()))
-        msec = dt.microsecond / 1000
-        try:
-            win32api.SetSystemTime(tm_year, tm_mon, tm_wday, tm_mday, tm_hour, tm_min, tm_sec, int(msec))
-            logger.info('已同步京东服务器时间：%s' % dt)
-        except Exception as e:
-            logger.error('同步京东服务器时间失败：%s' % dt)
-            logger.error(e)
+        min_diff = 1000000000000000  # 注意：abs比较，所以默认设置一个非常大的，不能设置为0
+        sync_count = 6
+        while sync_count > 0:
+            # 多次获得差值，取最小值
+            jd_server_timestamp_13 = self.get_jd_server_timestamp_13()
+            local_time_stamp_13_float = self.get_local_time_stamp_13_float()
+            # 注意：本地时间 （减去）  京东服务器时间
+            diff_jd_server_time = local_time_stamp_13_float - jd_server_timestamp_13
+            # print(diff_jd_server_time) # 有点疑惑，为什么第一次的总是最快的//todo ？？？？？
+            if abs(diff_jd_server_time) < abs(min_diff):
+                min_diff = diff_jd_server_time
+
+            sync_count -= 1
+
+        return min_diff
+
+    def get_jd_server_timestamp_13(self):
+        request_start_timestamp_13_float = self.get_local_time_stamp_13_float()
+        response = requests.get('https://a.jd.com//ajax/queryServerData.html')
+        request_response_timestamp_13_float = self.get_local_time_stamp_13_float()
+
+        js = json.loads(response.text)
+        # {"serverTime":160 745 692 0037}
+        jd_server_timestamp_13 = float(js["serverTime"])
+
+        jd_server_timestamp_13_float_without_network_delay = jd_server_timestamp_13 + (
+                (request_response_timestamp_13_float - request_start_timestamp_13_float) / 2)
+
+        response_parse_timestamp_13_float = self.get_local_time_stamp_13_float()
+
+        return (response_parse_timestamp_13_float - request_response_timestamp_13_float) \
+               + jd_server_timestamp_13_float_without_network_delay
+
+    @staticmethod
+    def datetime_to_timestamp(datetime_obj):
+        return int(time.mktime(datetime_obj.timetuple()) * 1000.0 + datetime_obj.microsecond / 1000.0)
+
+    @staticmethod
+    def get_local_time_stamp_13_float():
+        # 注意 time.time()的精度，我不是很确定。有的说是精确是时间错13位。有的说是机器不一样精度不一样
+        return time.time() * 1000
+
+
+if __name__ == '__main__':
+    Timer('2020-12-09 21:59:59.950').start();
