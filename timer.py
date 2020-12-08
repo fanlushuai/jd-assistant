@@ -19,8 +19,8 @@ class Timer(object):
 
     def start(self):
         logger.info('正在等待到达设定时间：%s' % self.buy_time)
-        local_time_stamp_13_float = self.get_local_time_stamp_13_float()
         while True:
+            local_time_stamp_13_float = self.get_local_time_stamp_13_float()
             if local_time_stamp_13_float >= self.buy_time:
                 logger.info('时间到达，开始执行……')
                 break
