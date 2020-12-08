@@ -3,17 +3,17 @@
 import json
 import os
 import pickle
-import re
 import random
+import re
 import time
+from datetime import datetime, timedelta
 
 import requests
 from bs4 import BeautifulSoup
-from datetime import datetime, timedelta
 
 from config import global_config
 from exception import AsstException
-from log import logger
+from log import logger, http_logger, http_request_url_cookies_logger
 from messenger import Messenger
 from timer import Timer
 from util import (
@@ -34,6 +34,12 @@ from util import (
     save_image,
     split_area_id
 )
+
+
+def log_round_trip(response, *args, **kwargs):
+    extra = {'req': response.request, 'res': response}
+    http_logger.debug('', extra=extra)
+    http_request_url_cookies_logger.debug('', extra=extra)
 
 
 class Assistant(object):
@@ -64,6 +70,8 @@ class Assistant(object):
         self.nick_name = ''
         self.is_login = False
         self.sess = requests.session()
+        self.sess.hooks['response'].append(log_round_trip)
+
         try:
             self._load_cookies()
         except Exception:
@@ -105,6 +113,7 @@ class Assistant(object):
             logger.error(e)
 
         self.sess = requests.session()
+        self.sess.hooks['response'].append(log_round_trip)
         return False
 
     @deprecated
@@ -1149,7 +1158,7 @@ class Assistant(object):
                 logger.info("抢购链接获取成功: %s", seckill_url)
                 return seckill_url
             else:
-                retry_count+=1
+                retry_count += 1
                 logger.info("第%s次获取抢购链接失败，%s不是抢购商品或抢购页面暂未刷新，%s秒后重试", retry_count, sku_id, retry_interval)
                 time.sleep(retry_interval)
 
@@ -1298,7 +1307,7 @@ class Assistant(object):
                 resp_json = parse_json(resp.text)
             except Exception as e:
                 logger.error('秒杀请求出错：%s', str(e))
-                retry_count+=1
+                retry_count += 1
                 time.sleep(retry_interval)
             # 返回信息
             # 抢购失败：
@@ -1316,7 +1325,7 @@ class Assistant(object):
                 return True
             else:
                 logger.info('抢购失败，返回信息: %s', resp_json)
-                retry_count+=1
+                retry_count += 1
                 time.sleep(retry_interval)
         return False
 
@@ -1355,7 +1364,8 @@ class Assistant(object):
             return False
 
     @deprecated
-    def exec_seckill_by_time(self, sku_ids, buy_time=None, sku_buy_time=None, retry=4, interval=4, num=1, fast_mode=True, sleep_interval=0.5, fast_sleep_interval=0.01):
+    def exec_seckill_by_time(self, sku_ids, buy_time=None, sku_buy_time=None, retry=4, interval=4, num=1,
+                             fast_mode=True, sleep_interval=0.5, fast_sleep_interval=0.01):
         """定时抢购
         :param sku_ids: 商品id，多个商品id用逗号进行分割，如"123,456,789"
         :param buy_time: 下单时间，例如：'2018-09-28 22:45:50.000'
@@ -1388,7 +1398,8 @@ class Assistant(object):
             self.exec_seckill(sku_id, server_buy_time, retry, interval, num, fast_mode)
 
     @check_login
-    def exec_reserve_seckill_by_time(self, sku_id, buy_time=None, retry=4, interval=4, num=1, is_pass_cart=False, sleep_interval=0.5, fast_sleep_interval=0.01):
+    def exec_reserve_seckill_by_time(self, sku_id, buy_time=None, retry=4, interval=4, num=1, is_pass_cart=False,
+                                     sleep_interval=0.5, fast_sleep_interval=0.01):
         """定时抢购`预约抢购商品`
 
         一定要确保预约的商品在购物车中才能使用这种方式！！！否则只能用其他方式
