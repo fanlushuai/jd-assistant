@@ -11,25 +11,26 @@ from log import logger
 class Timer(object):
 
     def __init__(self, buy_time, sleep_interval=0.5, fast_sleep_interval=0.01, sync_time_before_seconds=15):
-        self.buy_time = self.datetime_to_timestamp(datetime.strptime(buy_time, '%Y-%m-%d %H:%M:%S.%f'))
+        self.buy_time_base_server = self.datetime_to_timestamp(datetime.strptime(buy_time, '%Y-%m-%d %H:%M:%S.%f'))
+        self.buy_time_base_local = self.buy_time_base_server
         self.modify_buy_time()
-        self.fast_buy_time = self.buy_time + 5 * 1000
+        self.fast_buy_time = self.buy_time_base_local + 5 * 1000
         self.sleep_interval = sleep_interval
         self.fast_sleep_interval = fast_sleep_interval
         self.sync_time_before_seconds = sync_time_before_seconds
 
     def start(self):
-        logger.info('正在等待到达设定时间：%s' % self.buy_time)
+        logger.info('正在等待到达设定时间：%s' % self.buy_time_base_local)
         not_sync_time_before_buy = True
         while True:
             local_time_stamp_13_float = self.get_local_time_stamp_13_float()
-            if local_time_stamp_13_float > self.buy_time - self.sync_time_before_seconds * 1000:
+            if local_time_stamp_13_float > self.buy_time_base_local - self.sync_time_before_seconds * 1000:
                 if not_sync_time_before_buy:
                     self.modify_buy_time()
                     logger.info("临近时间节点再次同步服务器时间")
                     not_sync_time_before_buy = False
 
-            if local_time_stamp_13_float >= self.buy_time:
+            if local_time_stamp_13_float >= self.buy_time_base_local:
                 logger.info('时间到达，开始执行……')
                 break
             else:
@@ -40,14 +41,14 @@ class Timer(object):
 
     def modify_buy_time(self):
         # 根据服务器和本地时间的差值，来修改本地时间设置的抢购时间
-        local_buy_time = self.buy_time
+
         # 注意，diff=本地-京东的
         diff_time = self.get_diff_time()
-        local_sync_buy_time = local_buy_time - diff_time
+        local_sync_buy_time = self.buy_time_base_server - diff_time
 
-        logger.info('time require:  %s  after sync: %s diff: %s', self.buy_time, local_sync_buy_time,
+        logger.info('time require:  %s  after sync: %s diff: %s', self.buy_time_base_local, local_sync_buy_time,
                     diff_time)
-        self.buy_time = local_sync_buy_time
+        self.buy_time_base_local = local_sync_buy_time
 
     def get_diff_time(self):
         # 获取    本地时间 （减去）  京东服务器时间  的差值
