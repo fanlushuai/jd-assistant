@@ -5,12 +5,13 @@ import json
 import os
 import random
 import re
+import time
 import warnings
 from base64 import b64encode
 
 import requests
-from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_v1_5 as Cipher_pkcs1_v1_5
+from Crypto.PublicKey import RSA
 
 from log import logger
 
@@ -227,3 +228,12 @@ def get_random_useragent():
     :return: UserAgent字符串
     """
     return random.choice(USER_AGENTS)
+
+
+def datetime_to_timestamp(datetime_obj):
+    return int(time.mktime(datetime_obj.timetuple()) * 1000.0 + datetime_obj.microsecond / 1000.0)
+
+
+def get_local_time_stamp_13_float():
+    # 注意 time.time()的精度，我不是很确定。有的说是精确是时间错13位。有的说是机器不一样精度不一样
+    return time.time() * 1000
