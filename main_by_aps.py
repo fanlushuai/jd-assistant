@@ -10,5 +10,5 @@ if __name__ == '__main__':
     # 先不修改简单用用。看看效果再说。之后考虑重写逻辑全调度器。主要还是考虑精度问题
     run_date = datetime_obj + datetime.timedelta(minutes=-2)
     scheduler = BlockingScheduler()
-    scheduler.add_job(boot_ass(), 'date', run_date=run_date, args=['text'], id='xx')
+    scheduler.add_job(boot_ass, 'date', run_date=run_date, id='boot_ass')
     scheduler.start()
