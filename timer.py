@@ -10,7 +10,7 @@ from log import logger
 
 class Timer(object):
 
-    def __init__(self, buy_time, sleep_interval=0.5, fast_sleep_interval=0.01, sync_time_before_seconds=15):
+    def __init__(self, buy_time, sleep_interval=0.5, fast_sleep_interval=0.01, sync_time_before_seconds=5):
         self.buy_time_base_server = self.datetime_to_timestamp(datetime.strptime(buy_time, '%Y-%m-%d %H:%M:%S.%f'))
         self.buy_time_base_local = self.buy_time_base_server
         self.modify_buy_time()
@@ -26,8 +26,9 @@ class Timer(object):
             local_time_stamp_13_float = self.get_local_time_stamp_13_float()
             if local_time_stamp_13_float > self.buy_time_base_local - self.sync_time_before_seconds * 1000:
                 if not_sync_time_before_buy:
-                    self.modify_buy_time()
-                    logger.info("临近时间节点再次同步服务器时间")
+                    network_delay = self.test_network_delay()
+                    self.buy_time_base_local -= network_delay
+                    logger.info("临近时间节点测试网络延迟，校准购买时间")
                     not_sync_time_before_buy = False
 
             if local_time_stamp_13_float >= self.buy_time_base_local:
@@ -38,6 +39,12 @@ class Timer(object):
                     time.sleep(self.fast_sleep_interval)
                 else:
                     time.sleep(self.sleep_interval)
+
+    def test_network_delay(self):
+        request_start_timestamp_13_float = self.get_local_time_stamp_13_float()
+        requests.get('https://a.jd.com//ajax/queryServerData.html')
+        request_response_timestamp_13_float = self.get_local_time_stamp_13_float()
+        return request_response_timestamp_13_float - request_start_timestamp_13_float
 
     def modify_buy_time(self):
         # 根据服务器和本地时间的差值，来修改本地时间设置的抢购时间
