@@ -44,7 +44,7 @@ class Timer(object):
         request_start_timestamp_13_float = self.get_local_time_stamp_13_float()
         requests.get('https://a.jd.com//ajax/queryServerData.html')
         request_response_timestamp_13_float = self.get_local_time_stamp_13_float()
-        return request_response_timestamp_13_float - request_start_timestamp_13_float
+        return (request_response_timestamp_13_float - request_start_timestamp_13_float) / 2
 
     def modify_buy_time(self):
         # 根据服务器和本地时间的差值，来修改本地时间设置的抢购时间
