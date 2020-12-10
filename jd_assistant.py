@@ -1301,7 +1301,6 @@ class Assistant(object):
             try:
                 resp = self.sess.post(url=url, headers=headers, params=payload,
                                       data=self.seckill_order_data.get(sku_id), timeout=(0.1, 0.08))
-                logger.info(resp.text)
                 resp_json = parse_json(resp.text)
             except Exception as e:
                 logger.error('秒杀请求出错：%s', str(e))
