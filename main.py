@@ -1,15 +1,18 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
 from jd_assistant import Assistant
+from config import global_config
 
 """
 重要提示：此处为示例代码之一，请移步下面的链接查看使用教程👇
 https://github.com/tychxn/jd-assistant/wiki/1.-%E4%BA%AC%E4%B8%9C%E6%8A%A2%E8%B4%AD%E5%8A%A9%E6%89%8B%E7%94%A8%E6%B3%95
 """
 
+
 # 抢购通用配置
-sku_id = '100016672370'  # 商品id
-buy_time = '2020-12-9 9:9:00.950'  # 开始抢购时间，格式：'2020-11-28 12:59:59.950'，建议设置提前0.050秒，如果网络慢可根据自己网络情况适当修改
+
+sku_id = global_config.get('sku', 'sku_id')  # 商品id
+buy_time = global_config.get('sku', 'buy_time')  # 开始抢购时间，格式：'2020-11-28 12:59:59.950'
 retry = 5  # 抢购重复执行次数，可选参数，默认4次
 interval = 0.01  # 抢购执行间隔，可选参数，默认4秒
 num = 1  # 购买数量，可选参数，默认1个
@@ -20,24 +23,26 @@ fast_sleep_interval = 0.01  # 抢购5秒内倒计时轮询时间，默认0.01秒
 # 注意：一定要在抢购开始前手动清空购物车中此类无法勾选的商品！（因为脚本在执行清空购物车操作时，无法清空不能勾选的商品）
 is_pass_cart = False  # 是否跳过添加购物车，默认False
 
-
 # 配置【预约抢购，不会自动加入购物车】
 # area = '19_1607_3155_62117'  # 区域id
 # sku_buy_time = '2020-12-04 15:00:00.000'  # 商品抢购时间
 # buy_time = None  # 开始抢购时间，默认为None，自动提前0.050秒，网络通畅时不需要修改，如果网络慢可根据自己情况适当修改，格式：'2020-11-28 12:59:59.950'
-# fast_mode = True  # 快速模式：略过访问抢购订单结算页面这一步骤，默认为 True
+fast_mode = True  # 快速模式：略过访问抢购订单结算页面这一步骤，默认为 True
+
 
 def boot_ass():
     asst = Assistant()  # 初始化
     asst.login_by_QRcode()  # 扫码登陆
 
-    # 执行【预约抢购，自动加入购物车】 手动清空自动添加到购物车的
-    asst.exec_reserve_seckill_by_time(sku_id=sku_id, buy_time=buy_time, retry=retry, interval=interval, num=num,
-                                      is_pass_cart=is_pass_cart, sleep_interval=sleep_interval,
-                                      fast_sleep_interval=fast_sleep_interval)
+    # # 执行【预约抢购，自动加入购物车】 手动清空自动添加到购物车的
+    # asst.exec_reserve_seckill_by_time(sku_id=sku_id, buy_time=buy_time, retry=retry, interval=interval, num=num,
+    #                                   is_pass_cart=is_pass_cart, sleep_interval=sleep_interval,
+    #                                   fast_sleep_interval=fast_sleep_interval)
 
     # 执行【预约抢购，不会自动加入购物车】
-    # asst.exec_seckill_by_time(sku_ids=sku_id, buy_time=buy_time, sku_buy_time=sku_buy_time, retry=retry, interval=interval, num=num, fast_mode=fast_mode, sleep_interval=sleep_interval, fast_sleep_interval=fast_sleep_interval)
+    asst.exec_seckill_by_time(sku_ids=sku_id, buy_time=buy_time, retry=retry, interval=interval, num=num,
+                              fast_mode=fast_mode, sleep_interval=sleep_interval,
+                              fast_sleep_interval=fast_sleep_interval)
 
     # 根据商品是否有货自动下单
     # 6个参数：
@@ -47,6 +52,7 @@ def boot_ass():
     # stock_interval: 查询库存时间间隔，可选参数，默认3秒
     # submit_retry: 提交订单失败后重试次数，可选参数，默认3次
     # submit_interval: 提交订单失败后重试时间间隔，可选参数，默认5秒
+
 
 if __name__ == '__main__':
     boot_ass()

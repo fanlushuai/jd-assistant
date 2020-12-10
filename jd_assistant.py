@@ -6,16 +6,15 @@ import pickle
 import random
 import re
 import time
-from datetime import datetime, timedelta
 
 import requests
 from bs4 import BeautifulSoup
 
 from config import global_config
 from exception import AsstException
+from gun import TimeWait
 from log import logger, http_logger, http_request_url_cookies_logger
 from messenger import Messenger
-from timer import Timer
 from util import (
     DEFAULT_TIMEOUT,
     DEFAULT_USER_AGENT,
@@ -1032,8 +1031,7 @@ class Assistant(object):
         :param interval: 下单执行间隔，可选参数，默认5秒
         :return:
         """
-        t = Timer(buy_time=buy_time)
-        t.start()
+        TimeWait().start_wait_until_time(buy_time, auto_fix=True)
 
         for count in range(1, retry + 1):
             logger.info('第[%s/%s]次尝试提交订单', count, retry)
@@ -1377,25 +1375,12 @@ class Assistant(object):
         """
         items_dict = parse_sku_id(sku_ids=sku_ids)
         logger.info('准备抢购商品:%s', list(items_dict.keys()))
-        server_buy_time = None
-        realy_buy_time = None
 
-        if sku_buy_time is None:
-            exit(-1)
-        else:
-            server_buy_datetime = datetime.strptime(sku_buy_time, "%Y-%m-%d %H:%M:%S.%f")
-            server_buy_time = int(time.mktime(server_buy_datetime.timetuple()))
-            if buy_time is None:
-                realy_buy_time = (server_buy_datetime + timedelta(milliseconds=-50)).strftime("%Y-%m-%d %H:%M:%S.%f")
-            else:
-                realy_buy_time = buy_time
-
-        t = Timer(buy_time=realy_buy_time, sleep_interval=sleep_interval, fast_sleep_interval=fast_sleep_interval)
-        t.start()
+        TimeWait.start_wait_until_time(buy_time,auto_fix=True)
 
         for sku_id in items_dict:
             logger.info('开始抢购商品:%s', sku_id)
-            self.exec_seckill(sku_id, server_buy_time, retry, interval, num, fast_mode)
+            self.exec_seckill(sku_id, buy_time, retry, interval, num, fast_mode)
 
     @check_login
     def exec_reserve_seckill_by_time(self, sku_id, buy_time=None, retry=4, interval=4, num=1, is_pass_cart=False,
@@ -1426,8 +1411,7 @@ class Assistant(object):
         # 开抢前清空购物车
         self.clear_cart()
 
-        t = Timer(buy_time=buy_time, sleep_interval=sleep_interval, fast_sleep_interval=fast_sleep_interval)
-        t.start()
+        TimeWait.start_wait_until_time(buy_time, auto_fix=True)
 
         if is_pass_cart is not True:
             self.add_item_to_cart(sku_ids={sku_id: num})
