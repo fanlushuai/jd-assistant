@@ -123,3 +123,6 @@ class JDTimeSync(object):
         except Exception as e:
             logger.warn("测试网络延迟 异常，返回默认延迟 %s %s", http_delay_microseconds, e)
         return http_delay_microseconds
+
+if __name__ == '__main__':
+    TimeWait().start_wait_until_time('2020-12-11 10:00:00.000', auto_fix=True)

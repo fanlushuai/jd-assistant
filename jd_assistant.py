@@ -1376,7 +1376,7 @@ class Assistant(object):
         items_dict = parse_sku_id(sku_ids=sku_ids)
         logger.info('准备抢购商品:%s', list(items_dict.keys()))
 
-        TimeWait.start_wait_until_time(buy_time,auto_fix=True)
+        TimeWait().start_wait_until_time(buy_time, auto_fix=True)
 
         for sku_id in items_dict:
             logger.info('开始抢购商品:%s', sku_id)
@@ -1411,7 +1411,7 @@ class Assistant(object):
         # 开抢前清空购物车
         self.clear_cart()
 
-        TimeWait.start_wait_until_time(buy_time, auto_fix=True)
+        TimeWait().start_wait_until_time(buy_time, auto_fix=True)
 
         if is_pass_cart is not True:
             self.add_item_to_cart(sku_ids={sku_id: num})
