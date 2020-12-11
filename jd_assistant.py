@@ -1294,14 +1294,27 @@ class Assistant(object):
         }
 
         retry_interval = 0.1
-        retry_count = 0
+        retry_count = 1
 
-        while retry_count < 10:
-            resp_json = None
+        while retry_count <= 12:
             try:
                 resp = self.sess.post(url=url, headers=headers, params=payload,
-                                      data=self.seckill_order_data.get(sku_id), timeout=(0.1, 0.08))
+                                      data=self.seckill_order_data.get(sku_id), timeout=(0.1, 0.09))
                 resp_json = parse_json(resp.text)
+
+                if resp_json is None:
+                    continue
+
+                if resp_json.get('success'):
+                    order_id = resp_json.get('orderId')
+                    total_money = resp_json.get('totalMoney')
+                    pay_url = 'https:' + resp_json.get('pcUrl')
+                    logger.info('抢购成功，订单号: %s, 总价: %s, 电脑端付款链接: %s', order_id, total_money, pay_url)
+                    return True
+                else:
+                    logger.info('%s抢购失败，返回信息: %s', retry_count, resp_json)
+                    retry_count += 1
+                    time.sleep(retry_interval)
             except Exception as e:
                 logger.error('秒杀请求出错：%s', str(e))
                 retry_count += 1
@@ -1314,16 +1327,6 @@ class Assistant(object):
             # 抢购成功：
             # {"appUrl":"xxxxx","orderId":820227xxxxx,"pcUrl":"xxxxx","resultCode":0,"skuId":0,"success":true,"totalMoney":"xxxxx"}
 
-            if resp_json.get('success'):
-                order_id = resp_json.get('orderId')
-                total_money = resp_json.get('totalMoney')
-                pay_url = 'https:' + resp_json.get('pcUrl')
-                logger.info('抢购成功，订单号: %s, 总价: %s, 电脑端付款链接: %s', order_id, total_money, pay_url)
-                return True
-            else:
-                logger.info('抢购失败，返回信息: %s', resp_json)
-                retry_count += 1
-                time.sleep(retry_interval)
         return False
 
     @deprecated
