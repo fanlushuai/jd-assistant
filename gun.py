@@ -2,6 +2,7 @@
 import json
 import time
 from datetime import datetime
+from itertools import repeat
 
 import requests
 
@@ -46,7 +47,8 @@ class Timer(object):
         """
         logger.info('Timer loop …… util：%s' % trigger_time)
         fast_change_time = trigger_time - self.fast_change_seconds * 1000
-        while True:
+
+        for _ in repeat(None):
             local_time_stamp_13_float = get_local_time_stamp_13_float()
 
             if local_time_stamp_13_float >= trigger_time:
@@ -69,15 +71,16 @@ class JDTimeSync(object):
         # 获取    本地时间 （减去）  京东服务器时间  的差值
 
         min_diff = 1000000000000000  # 注意：abs比较，所以默认设置一个非常大的，不能设置为0
-        sync_count = 2
-        while sync_count > 0:
+        # 循环次数，为4-1，=3次
+        for sync_count in range(1, 4):
             # 多次获得差值，取最小值
             try:
                 jd_server_timestamp_13 = self.get_jd_server_timestamp_13()
                 local_time_stamp_13_float = get_local_time_stamp_13_float()
                 # 注意：本地时间 （减去）  京东服务器时间
                 diff_jd_server_time = local_time_stamp_13_float - jd_server_timestamp_13
-                print(diff_jd_server_time)  # 有点疑惑，为什么第一次的总是最快的//todo ？？？？？
+                # print(diff_jd_server_time)  # 有点疑惑，为什么第一次的总是最快的//todo ？？？？？
+                logger.debug("diff %s", diff_jd_server_time)
                 if abs(diff_jd_server_time) < abs(min_diff):
                     min_diff = diff_jd_server_time
             except Exception as e:
@@ -86,7 +89,6 @@ class JDTimeSync(object):
                 logger.warn("获取京东时间异常 %s,直接认为0差距", e)
                 return min_diff
 
-            sync_count -= 1
             time.sleep(0.5)
 
         return min_diff
@@ -124,5 +126,7 @@ class JDTimeSync(object):
             logger.warn("测试网络延迟 异常，返回默认延迟 %s %s", http_delay_microseconds, e)
         return http_delay_microseconds
 
+
 if __name__ == '__main__':
-    TimeWait().start_wait_until_time('2020-12-11 10:00:00.000', auto_fix=True)
+    JDTimeSync().local_diff_server_time_microseconds()
+    # TimeWait().start_wait_until_time('2020-12-11 10:00:00.000', auto_fix=True)

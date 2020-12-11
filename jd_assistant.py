@@ -6,6 +6,7 @@ import pickle
 import random
 import re
 import time
+from itertools import repeat
 
 import requests
 from bs4 import BeautifulSoup
@@ -653,8 +654,7 @@ class Assistant(object):
                 'ptype': 1,
             }
 
-            i = 0
-            while i < 3:
+            for i in range(3):
                 try:
                     resp = self.sess.get(url=url, params=payload, headers=headers, timeout=(0.1, 0.08))
                     if 'https://cart.jd.com/cart.action' in resp.url:  # 套装商品加入购物车后直接跳转到购物车页面
@@ -667,11 +667,9 @@ class Assistant(object):
                         logger.info('%s x %s 已成功加入购物车', sku_id, count)
                         break
                     else:
-                        i += 1
                         logger.error('%s 添加到购物车失败，开始第 %s 次重试', sku_id, i)
                         logger.error('响应数据：%s', resp)
                 except requests.exceptions.ConnectTimeout as e:
-                    i += 1
                     logger.error('%s 添加到购物车请求发送超时，开始第 %s 次重试', sku_id, i)
                 except requests.exceptions.ReadTimeout as e:
                     logger.error('%s 添加到购物车请求响应超时，忽略，继续执行', sku_id)
@@ -828,8 +826,7 @@ class Assistant(object):
             'rid': str(int(time.time() * 1000)),
         }
 
-        i = 0
-        while i < 3:
+        for i in range(3):
             try:
                 resp = self.sess.get(url=url, params=payload, timeout=(0.1, 0.08))
                 if not response_status(resp):
@@ -858,14 +855,12 @@ class Assistant(object):
                 logger.info("下单信息：%s", order_detail)
                 return order_detail
             except requests.exceptions.ConnectTimeout as e:
-                i += 1
                 logger.error('订单结算页面数据连接超时，开始第 %s 次重试', i)
             except requests.exceptions.ReadTimeout as e:
                 logger.error('订单结算页面数据获取超时（可以忽略），报错信息：%s', e)
                 break
             except Exception as e:
                 logger.error('订单结算页面数据解析异常（可以忽略），报错信息：%s', e)
-                logger.error('resp.text：%s', resp.text)
                 break
 
     def _save_invoice(self):
@@ -1143,9 +1138,7 @@ class Assistant(object):
             'Referer': 'https://item.jd.com/{}.html'.format(sku_id),
         }
         retry_interval = 0.05
-        retry_count = 0
-
-        while retry_count < 10:
+        for retry_count in range(10):
             resp = self.sess.get(url=url, headers=headers, params=payload, timeout=(0.1, 0.08))
             resp_json = parse_json(resp.text)
             if resp_json.get('url'):
@@ -1156,7 +1149,6 @@ class Assistant(object):
                 logger.info("抢购链接获取成功: %s", seckill_url)
                 return seckill_url
             else:
-                retry_count += 1
                 logger.info("第%s次获取抢购链接失败，%s不是抢购商品或抢购页面暂未刷新，%s秒后重试", retry_count, sku_id, retry_interval)
                 time.sleep(retry_interval)
 
@@ -1294,9 +1286,7 @@ class Assistant(object):
         }
 
         retry_interval = 0.1
-        retry_count = 1
-
-        while retry_count <= 12:
+        for retry_count in range(10):
             try:
                 resp = self.sess.post(url=url, headers=headers, params=payload,
                                       data=self.seckill_order_data.get(sku_id), timeout=(0.1, 0.09))
@@ -1313,11 +1303,9 @@ class Assistant(object):
                     return True
                 else:
                     logger.info('%s抢购失败，返回信息: %s', retry_count, resp_json)
-                    retry_count += 1
                     time.sleep(retry_interval)
             except Exception as e:
                 logger.error('秒杀请求出错：%s', str(e))
-                retry_count += 1
                 time.sleep(retry_interval)
             # 返回信息
             # 抢购失败：
@@ -1448,7 +1436,7 @@ class Assistant(object):
 
         if not wait_all:
             logger.info('下单模式：%s 任一商品有货并且未下架均会尝试下单', items_list)
-            while True:
+            for _ in repeat(None):
                 for (sku_id, count) in items_dict.items():
                     if not self.if_item_can_be_ordered(sku_ids={sku_id: count}, area=area_id):
                         logger.info('%s 不满足下单条件，%ss后进行下一次查询', sku_id, stock_interval)
@@ -1462,7 +1450,7 @@ class Assistant(object):
                     time.sleep(stock_interval)
         else:
             logger.info('下单模式：%s 所有都商品同时有货并且未下架才会尝试下单', items_list)
-            while True:
+            for _ in repeat(None):
                 if not self.if_item_can_be_ordered(sku_ids=sku_ids, area=area_id):
                     logger.info('%s 不满足下单条件，%ss后进行下一次查询', items_list, stock_interval)
                 else:
