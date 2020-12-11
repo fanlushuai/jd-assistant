@@ -1139,18 +1139,21 @@ class Assistant(object):
         }
         retry_interval = 0.05
         for retry_count in range(10):
-            resp = self.sess.get(url=url, headers=headers, params=payload, timeout=(0.1, 0.08))
-            resp_json = parse_json(resp.text)
-            if resp_json.get('url'):
-                # https://divide.jd.com/user_routing?skuId=8654289&sn=c3f4ececd8461f0e4d7267e96a91e0e0&from=pc
-                router_url = 'https:' + resp_json.get('url')
-                # https://marathon.jd.com/captcha.html?skuId=8654289&sn=c3f4ececd8461f0e4d7267e96a91e0e0&from=pc
-                seckill_url = router_url.replace('divide', 'marathon').replace('user_routing', 'captcha.html')
-                logger.info("抢购链接获取成功: %s", seckill_url)
-                return seckill_url
-            else:
-                logger.info("第%s次获取抢购链接失败，%s不是抢购商品或抢购页面暂未刷新，%s秒后重试", retry_count, sku_id, retry_interval)
-                time.sleep(retry_interval)
+            try:
+                resp = self.sess.get(url=url, headers=headers, params=payload, timeout=(0.1, 0.08))
+                resp_json = parse_json(resp.text)
+                if resp_json.get('url'):
+                    # https://divide.jd.com/user_routing?skuId=8654289&sn=c3f4ececd8461f0e4d7267e96a91e0e0&from=pc
+                    router_url = 'https:' + resp_json.get('url')
+                    # https://marathon.jd.com/captcha.html?skuId=8654289&sn=c3f4ececd8461f0e4d7267e96a91e0e0&from=pc
+                    seckill_url = router_url.replace('divide', 'marathon').replace('user_routing', 'captcha.html')
+                    logger.info("抢购链接获取成功: %s", seckill_url)
+                    return seckill_url
+                else:
+                    logger.info("第%s次获取抢购链接失败，%s不是抢购商品或抢购页面暂未刷新，%s秒后重试", retry_count, sku_id, retry_interval)
+                    time.sleep(retry_interval)
+            except Exception as e:
+                logger.error("%s", e)
 
         logger.info("抢购链接获取失败，终止抢购！")
         exit(-1)
@@ -1163,11 +1166,13 @@ class Assistant(object):
         """
         if not self.seckill_url.get(sku_id):
             self.seckill_url[sku_id] = self._get_seckill_url(sku_id, server_buy_time)
+
         headers = {
             'User-Agent': self.user_agent,
             'Host': 'marathon.jd.com',
             'Referer': 'https://item.jd.com/{}.html'.format(sku_id),
         }
+
         self.sess.get(url=self.seckill_url.get(sku_id), headers=headers, allow_redirects=False, timeout=(0.1, 0.08))
 
     @deprecated
