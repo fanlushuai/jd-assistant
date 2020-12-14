@@ -1139,7 +1139,7 @@ class Assistant(object):
             'Referer': 'https://item.jd.com/{}.html'.format(sku_id),
         }
 
-        url = self.__get_sec_kill_url(url, headers, payload)
+        url = self.__get_sec_kill_url(url, headers, payload, sku_id)
 
         if not url:
             return url
@@ -1148,7 +1148,7 @@ class Assistant(object):
         exit(-1)
 
     @threads(3)
-    def __get_sec_kill_url(self, url, headers, payload):
+    def __get_sec_kill_url(self, url, headers, payload, sku_id):
         retry_interval = 0.05
         for retry_count in range(10):
             try:
