@@ -8,6 +8,7 @@ import requests
 
 from config import global_config
 from log import logger
+from muti_thread import threads
 from util import DEFAULT_USER_AGENT, get_random_useragent, get_local_time_stamp_13_float, datetime_to_timestamp
 
 
@@ -80,7 +81,7 @@ class JDTimeSync(object):
                 # 注意：本地时间 （减去）  京东服务器时间
                 diff_jd_server_time = local_time_stamp_13_float - jd_server_timestamp_13
                 # print(diff_jd_server_time)  # 有点疑惑，为什么第一次的总是最快的//todo ？？？？？
-                logger.debug("diff %s", diff_jd_server_time)
+                logger.info("diff %s", diff_jd_server_time)
                 if abs(diff_jd_server_time) < abs(min_diff):
                     min_diff = diff_jd_server_time
             except Exception as e:
@@ -93,6 +94,7 @@ class JDTimeSync(object):
 
         return min_diff
 
+    @threads(2)
     def get_jd_server_timestamp_13(self):
         url = 'https://a.jd.com//ajax/queryServerData.html'
         headers = {

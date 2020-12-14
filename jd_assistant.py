@@ -16,6 +16,7 @@ from exception import AsstException
 from gun import TimeWait
 from log import logger, http_logger, http_request_url_cookies_logger
 from messenger import Messenger
+from muti_thread import threads
 from util import (
     DEFAULT_TIMEOUT,
     DEFAULT_USER_AGENT,
@@ -1137,6 +1138,17 @@ class Assistant(object):
             'Host': 'itemko.jd.com',
             'Referer': 'https://item.jd.com/{}.html'.format(sku_id),
         }
+
+        url = self.__get_sec_kill_url(url, headers, payload)
+
+        if not url:
+            return url
+
+        logger.info("抢购链接获取失败，终止抢购！")
+        exit(-1)
+
+    @threads(3)
+    def __get_sec_kill_url(self, url, headers, payload):
         retry_interval = 0.05
         for retry_count in range(10):
             try:
@@ -1154,9 +1166,7 @@ class Assistant(object):
                     time.sleep(retry_interval)
             except Exception as e:
                 logger.error("%s", e)
-
-        logger.info("抢购链接获取失败，终止抢购！")
-        exit(-1)
+        return None
 
     @deprecated
     def request_seckill_url(self, sku_id, server_buy_time):
@@ -1270,6 +1280,7 @@ class Assistant(object):
         return data
 
     @deprecated
+    @threads(5)
     def submit_seckill_order(self, sku_id, server_buy_time=int(time.time()), num=1):
         """提交抢购（秒杀）订单
         :param sku_id: 商品id
@@ -1280,8 +1291,6 @@ class Assistant(object):
         payload = {
             'skuId': sku_id,
         }
-        if not self.seckill_order_data.get(sku_id):
-            self.seckill_order_data[sku_id] = self._gen_seckill_order_data(sku_id, num)
 
         headers = {
             'User-Agent': self.user_agent,
@@ -1338,7 +1347,7 @@ class Assistant(object):
         :param fast_mode: 快速模式：略过访问抢购订单结算页面这一步骤，默认为 True
         :return: 抢购结果 True/False
         """
-
+        # 多线程访问抢购链接。如果全部返回还是没有获取，那么继续循环来，直至循环30次。一旦一个线程返回，立马结束所有线程，将结果通知到下一个过程
         self.request_seckill_url(sku_id, server_buy_time)
 
         for count in range(1, retry + 1):
@@ -1347,6 +1356,7 @@ class Assistant(object):
             if not fast_mode:
                 self.request_seckill_checkout_page(sku_id, num)
 
+            # 多线程提交订单
             if self.submit_seckill_order(sku_id, server_buy_time, num):
                 return True
             else:
@@ -1371,8 +1381,15 @@ class Assistant(object):
         items_dict = parse_sku_id(sku_ids=sku_ids)
         logger.info('准备抢购商品:%s', list(items_dict.keys()))
 
+        # 提前初始化哪些可以初始化的东西
+        for sku_id in items_dict:
+            if not self.seckill_order_data.get(sku_id):
+                self.seckill_order_data[sku_id] = self._gen_seckill_order_data(sku_id, num)
+
+        # 等待秒杀
         TimeWait().start_wait_until_time(buy_time, auto_fix=True)
 
+        # 进入秒杀
         for sku_id in items_dict:
             logger.info('开始抢购商品:%s', sku_id)
             self.exec_seckill(sku_id, buy_time, retry, interval, num, fast_mode)
