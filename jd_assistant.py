@@ -1141,7 +1141,7 @@ class Assistant(object):
 
         url = self.__get_sec_kill_url(url, headers, payload, sku_id)
 
-        if not url:
+        if url:
             return url
 
         logger.info("抢购链接获取失败，终止抢购！")
@@ -1152,7 +1152,7 @@ class Assistant(object):
         retry_interval = 0.05
         for retry_count in range(10):
             try:
-                resp = self.sess.get(url=url, headers=headers, params=payload, timeout=(0.1, 0.08))
+                resp = self.sess.get(url=url, headers=headers, params=payload, timeout=(0.5, 0.5))
                 resp_json = parse_json(resp.text)
                 if resp_json.get('url'):
                     # https://divide.jd.com/user_routing?skuId=8654289&sn=c3f4ececd8461f0e4d7267e96a91e0e0&from=pc
@@ -1183,7 +1183,7 @@ class Assistant(object):
             'Referer': 'https://item.jd.com/{}.html'.format(sku_id),
         }
 
-        self.sess.get(url=self.seckill_url.get(sku_id), headers=headers, allow_redirects=False, timeout=(0.1, 0.08))
+        self.sess.get(url=self.seckill_url.get(sku_id), headers=headers, allow_redirects=False, timeout=(0.5, 0.5))
 
     @deprecated
     def request_seckill_checkout_page(self, sku_id, num=1):
@@ -1303,7 +1303,7 @@ class Assistant(object):
         for retry_count in range(10):
             try:
                 resp = self.sess.post(url=url, headers=headers, params=payload,
-                                      data=self.seckill_order_data.get(sku_id), timeout=(0.1, 0.09))
+                                      data=self.seckill_order_data.get(sku_id), timeout=(0.5, 0.5))
                 resp_json = parse_json(resp.text)
 
                 if resp_json is None:
