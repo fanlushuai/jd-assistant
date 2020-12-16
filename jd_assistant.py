@@ -1168,8 +1168,10 @@ class Assistant(object):
             self.seckill_url[sku_id] = self._get_seckill_url(sku_id, server_buy_time)
 
         if self.seckill_url.get(sku_id):
-            logger.info("抢购链接未获取成功。直接结束")
-            exit(-1)
+            logger.info("获取抢购连接ok")
+        else:
+            logger.info("获取抢购连接 失败")
+            return False
 
         headers = {
             'User-Agent': self.user_agent,
@@ -1177,7 +1179,13 @@ class Assistant(object):
             'Referer': 'https://item.jd.com/{}.html'.format(sku_id),
         }
 
-        self.sess.get(url=self.seckill_url.get(sku_id), headers=headers, allow_redirects=False)
+        try:
+            self.sess.get(url=self.seckill_url.get(sku_id), headers=headers, allow_redirects=False)
+            logger.info("访问，获取到的抢购连接ok")
+            return True
+        except Exception as e:
+            logger.info("访问，获取到的抢购连接 异常 %s", e)
+            return False
 
     @deprecated
     def request_seckill_checkout_page(self, sku_id, num=1):
@@ -1341,20 +1349,17 @@ class Assistant(object):
         :return: 抢购结果 True/False
         """
         # 多线程访问抢购链接。
-        self.request_seckill_url(sku_id, server_buy_time)
+        if not self.request_seckill_url(sku_id, server_buy_time):
+            return False
 
         if not fast_mode:
             self.request_seckill_checkout_page(sku_id, num)
 
         # 多线程提交订单
-        if self.submit_seckill_order(sku_id, server_buy_time, num):
-            logger.info("抢购成功")
-            return True
-        else:
-            logger.info("抢购失败")
+        return self.submit_seckill_order(sku_id, server_buy_time, num)
 
     @deprecated
-    def exec_seckill_by_time(self, sku_ids, buy_time=None, num=1,fast_mode=True):
+    def exec_seckill_by_time(self, sku_ids, buy_time=None, num=1, fast_mode=True):
         """定时抢购
         :param sku_ids: 商品id，多个商品id用逗号进行分割，如"123,456,789"
         :param buy_time: 下单时间，例如：'2018-09-28 22:45:50.000'
