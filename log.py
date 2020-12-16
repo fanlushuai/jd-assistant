@@ -59,7 +59,7 @@ class HttpFormatter(logging.Formatter):
 
 def set_logger():
     logger.setLevel(logging.INFO)
-    formatter = logging.Formatter('{asctime} [{levelname}] {name} {filename}:{lineno} - {message}', style='{')
+    formatter = logging.Formatter('{asctime} [{levelname}] t-{thread} {name} {filename}:{lineno} - {message}', style='{')
 
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(formatter)
@@ -73,7 +73,7 @@ def set_logger():
 
 def set_http_logger():
     http_logger.setLevel(logging.DEBUG)
-    formatter = HttpFormatter('{asctime} [{levelname}] {name} {filename}:{lineno} - {message}', style='{')
+    formatter = HttpFormatter('{asctime} [{levelname}] t-{thread} {name} {filename}:{lineno} - {message}', style='{')
 
     # console_handler = logging.StreamHandler()
     # console_handler.setFormatter(formatter)
@@ -92,7 +92,7 @@ def set_http_logger():
 
 def set_http_request_url_cookies_logger():
     http_request_url_cookies_logger.setLevel(logging.DEBUG)
-    formatter = HttpFormatter('{asctime} - {message}', style='{')
+    formatter = HttpFormatter('{asctime} t-{thread} - {message}', style='{')
 
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(formatter)
