@@ -33,7 +33,9 @@ def threads(concurrent_size=1, try_times=1, try_internal=0.05):
     def decorate(func):
         @functools.wraps(func)
         def wrapper(*args, **kw):
-            return Job(concurrent_size, try_times, try_internal).run(func, *args, **kw)
+            re = Job(concurrent_size, try_times, try_internal).run(func, *args, **kw)
+            logger.info("threads tool return %s", re)
+            return re
 
         return wrapper
 
