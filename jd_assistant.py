@@ -1140,33 +1140,23 @@ class Assistant(object):
         }
 
         url = self.__get_sec_kill_url(url, headers, payload, sku_id)
+        return url
 
-        if url:
-            return url
-
-        logger.info("抢购链接获取失败，终止抢购！")
-        exit(-1)
-
-    @threads(3)
+    @threads(concurrent_size=3, try_internal=0.02, try_times=100)
     def __get_sec_kill_url(self, url, headers, payload, sku_id):
-        retry_interval = 0.05
-        for retry_count in range(10):
-            try:
-                resp = self.sess.get(url=url, headers=headers, params=payload, timeout=(0.5, 0.5))
-                resp_json = parse_json(resp.text)
-                if resp_json.get('url'):
-                    # https://divide.jd.com/user_routing?skuId=8654289&sn=c3f4ececd8461f0e4d7267e96a91e0e0&from=pc
-                    router_url = 'https:' + resp_json.get('url')
-                    # https://marathon.jd.com/captcha.html?skuId=8654289&sn=c3f4ececd8461f0e4d7267e96a91e0e0&from=pc
-                    seckill_url = router_url.replace('divide', 'marathon').replace('user_routing', 'captcha.html')
-                    logger.info("抢购链接获取成功: %s", seckill_url)
-                    return seckill_url
-                else:
-                    logger.info("第%s次获取抢购链接失败，%s不是抢购商品或抢购页面暂未刷新，%s秒后重试", retry_count, sku_id, retry_interval)
-                    time.sleep(retry_interval)
-            except Exception as e:
-                logger.error("%s", e)
-        return None
+        try:
+            resp = self.sess.get(url=url, headers=headers, params=payload)
+            resp_json = parse_json(resp.text)
+            if resp_json.get('url'):
+                # https://divide.jd.com/user_routing?skuId=8654289&sn=c3f4ececd8461f0e4d7267e96a91e0e0&from=pc
+                router_url = 'https:' + resp_json.get('url')
+                # https://marathon.jd.com/captcha.html?skuId=8654289&sn=c3f4ececd8461f0e4d7267e96a91e0e0&from=pc
+                seckill_url = router_url.replace('divide', 'marathon').replace('user_routing', 'captcha.html')
+                logger.info("抢购链接获取成功: %s", seckill_url)
+                return seckill_url
+        except Exception as e:
+            logger.error("%s", e)
+            return None
 
     @deprecated
     def request_seckill_url(self, sku_id, server_buy_time):
@@ -1177,13 +1167,17 @@ class Assistant(object):
         if not self.seckill_url.get(sku_id):
             self.seckill_url[sku_id] = self._get_seckill_url(sku_id, server_buy_time)
 
+        if self.seckill_url.get(sku_id):
+            logger.info("抢购链接未获取成功。直接结束")
+            exit(-1)
+
         headers = {
             'User-Agent': self.user_agent,
             'Host': 'marathon.jd.com',
             'Referer': 'https://item.jd.com/{}.html'.format(sku_id),
         }
 
-        self.sess.get(url=self.seckill_url.get(sku_id), headers=headers, allow_redirects=False, timeout=(0.5, 0.5))
+        self.sess.get(url=self.seckill_url.get(sku_id), headers=headers, allow_redirects=False)
 
     @deprecated
     def request_seckill_checkout_page(self, sku_id, num=1):
@@ -1280,7 +1274,6 @@ class Assistant(object):
         return data
 
     @deprecated
-    @threads(5)
     def submit_seckill_order(self, sku_id, server_buy_time=int(time.time()), num=1):
         """提交抢购（秒杀）订单
         :param sku_id: 商品id
@@ -1299,28 +1292,17 @@ class Assistant(object):
                 sku_id, num, server_buy_time),
         }
 
-        retry_interval = 0.1
-        for retry_count in range(10):
-            try:
-                resp = self.sess.post(url=url, headers=headers, params=payload,
-                                      data=self.seckill_order_data.get(sku_id), timeout=(0.5, 0.5))
-                resp_json = parse_json(resp.text)
+        return self._submit_seckill_order(url, headers, payload, sku_id)
 
-                if resp_json is None:
-                    continue
+    @threads(concurrent_size=4, try_internal=0.03, try_times=5)
+    def _submit_seckill_order(self, url, headers, payload, sku_id):
+        try:
+            resp = self.sess.post(url=url, headers=headers, params=payload,
+                                  data=self.seckill_order_data.get(sku_id))
+            resp_json = parse_json(resp.text)
 
-                if resp_json.get('success'):
-                    order_id = resp_json.get('orderId')
-                    total_money = resp_json.get('totalMoney')
-                    pay_url = 'https:' + resp_json.get('pcUrl')
-                    logger.info('抢购成功，订单号: %s, 总价: %s, 电脑端付款链接: %s', order_id, total_money, pay_url)
-                    return True
-                else:
-                    logger.info('%s抢购失败，返回信息: %s', retry_count, resp_json)
-                    time.sleep(retry_interval)
-            except Exception as e:
-                logger.error('秒杀请求出错：%s', str(e))
-                time.sleep(retry_interval)
+            if resp_json is None:
+                return None
             # 返回信息
             # 抢购失败：
             # {'errorMessage': '很遗憾没有抢到，再接再厉哦。', 'orderId': 0, 'resultCode': 60074, 'skuId': 0, 'success': False}
@@ -1329,7 +1311,18 @@ class Assistant(object):
             # 抢购成功：
             # {"appUrl":"xxxxx","orderId":820227xxxxx,"pcUrl":"xxxxx","resultCode":0,"skuId":0,"success":true,"totalMoney":"xxxxx"}
 
-        return False
+            if resp_json.get('success'):
+                order_id = resp_json.get('orderId')
+                total_money = resp_json.get('totalMoney')
+                pay_url = 'https:' + resp_json.get('pcUrl')
+                logger.info('抢购成功，订单号: %s, 总价: %s, 电脑端付款链接: %s', order_id, total_money, pay_url)
+                return True
+            else:
+                logger.info('抢购失败，返回信息: %s', resp_json)
+                return None
+        except Exception as e:
+            logger.error('秒杀请求出错：%s', str(e))
+            return None
 
     @deprecated
     def exec_seckill(self, sku_id, server_buy_time, retry=4, interval=4, num=1, fast_mode=True):
@@ -1347,28 +1340,22 @@ class Assistant(object):
         :param fast_mode: 快速模式：略过访问抢购订单结算页面这一步骤，默认为 True
         :return: 抢购结果 True/False
         """
-        # 多线程访问抢购链接。如果全部返回还是没有获取，那么继续循环来，直至循环30次。一旦一个线程返回，立马结束所有线程，将结果通知到下一个过程
+        # 多线程访问抢购链接。
         self.request_seckill_url(sku_id, server_buy_time)
 
-        for count in range(1, retry + 1):
-            logger.info('第[%s/%s]次尝试抢购商品:%s', count, retry, sku_id)
+        if not fast_mode:
+            self.request_seckill_checkout_page(sku_id, num)
 
-            if not fast_mode:
-                self.request_seckill_checkout_page(sku_id, num)
-
-            # 多线程提交订单
-            if self.submit_seckill_order(sku_id, server_buy_time, num):
-                return True
-            else:
-                logger.info('休息%ss', interval)
-                time.sleep(interval)
+        # 多线程提交订单
+        if self.submit_seckill_order(sku_id, server_buy_time, num):
+            logger.info("抢购成功")
+            return True
         else:
-            logger.info('执行结束，抢购%s失败！', sku_id)
-            return False
+            logger.info("抢购失败")
 
     @deprecated
-    def exec_seckill_by_time(self, sku_ids, buy_time=None, sku_buy_time=None, retry=4, interval=4, num=1,
-                             fast_mode=True, sleep_interval=0.5, fast_sleep_interval=0.01):
+    def exec_seckill_by_time(self, sku_ids, buy_time=None, retry=4, interval=4, num=1,
+                             fast_mode=True):
         """定时抢购
         :param sku_ids: 商品id，多个商品id用逗号进行分割，如"123,456,789"
         :param buy_time: 下单时间，例如：'2018-09-28 22:45:50.000'
