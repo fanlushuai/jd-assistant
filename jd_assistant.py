@@ -1325,7 +1325,7 @@ class Assistant(object):
             return None
 
     @deprecated
-    def exec_seckill(self, sku_id, server_buy_time, retry=4, interval=4, num=1, fast_mode=True):
+    def exec_seckill(self, sku_id, server_buy_time, num=1, fast_mode=True):
         """立即抢购
 
         抢购商品的下单流程与普通商品不同，不支持加入购物车，可能需要提前预约，主要执行流程如下：
@@ -1354,13 +1354,10 @@ class Assistant(object):
             logger.info("抢购失败")
 
     @deprecated
-    def exec_seckill_by_time(self, sku_ids, buy_time=None, retry=4, interval=4, num=1,
-                             fast_mode=True):
+    def exec_seckill_by_time(self, sku_ids, buy_time=None, num=1,fast_mode=True):
         """定时抢购
         :param sku_ids: 商品id，多个商品id用逗号进行分割，如"123,456,789"
         :param buy_time: 下单时间，例如：'2018-09-28 22:45:50.000'
-        :param retry: 抢购重复执行次数，可选参数，默认4次
-        :param interval: 抢购执行间隔，可选参数，默认4秒
         :param num: 购买数量，可选参数，默认1个
         :param fast_mode: 快速模式：略过访问抢购订单结算页面这一步骤，默认为 True
         :return:
@@ -1379,7 +1376,7 @@ class Assistant(object):
         # 进入秒杀
         for sku_id in items_dict:
             logger.info('开始抢购商品:%s', sku_id)
-            self.exec_seckill(sku_id, buy_time, retry, interval, num, fast_mode)
+            self.exec_seckill(sku_id, buy_time, num, fast_mode)
 
     @check_login
     def exec_reserve_seckill_by_time(self, sku_id, buy_time=None, retry=4, interval=4, num=1, is_pass_cart=False,

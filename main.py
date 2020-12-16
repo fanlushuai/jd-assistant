@@ -1,13 +1,12 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
-from jd_assistant import Assistant
 from config import global_config
+from jd_assistant import Assistant
 
 """
 重要提示：此处为示例代码之一，请移步下面的链接查看使用教程👇
 https://github.com/tychxn/jd-assistant/wiki/1.-%E4%BA%AC%E4%B8%9C%E6%8A%A2%E8%B4%AD%E5%8A%A9%E6%89%8B%E7%94%A8%E6%B3%95
 """
-
 
 # 抢购通用配置
 
@@ -40,9 +39,7 @@ def boot_ass():
     #                                   fast_sleep_interval=fast_sleep_interval)
 
     # 执行【预约抢购，不会自动加入购物车】
-    asst.exec_seckill_by_time(sku_ids=sku_id, buy_time=buy_time, retry=retry, interval=interval, num=num,
-                              fast_mode=fast_mode, sleep_interval=sleep_interval,
-                              fast_sleep_interval=fast_sleep_interval)
+    asst.exec_seckill_by_time(sku_ids=sku_id, buy_time=buy_time, num=num, fast_mode=fast_mode)
 
     # 根据商品是否有货自动下单
     # 6个参数：
