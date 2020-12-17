@@ -99,6 +99,7 @@ class Job(object):
                         return re
                     else:
                         try_return_count += 1
+                        futures.remove(future)
                         if try_return_count >= self.try_times * self.concurrent_size:
                             return None
 
