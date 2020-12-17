@@ -38,6 +38,7 @@ def pre_concurrent_pool():
     t = time.perf_counter()
     for i in range(no_task_wait_size_assessed):
         concurrent_pool_assessed.submit(do_nothing)
+    time.sleep(5) #便于使用过期时间进行调试
     logger.info("预热线程池，耗时%s", time.perf_counter() - t)
 
 
