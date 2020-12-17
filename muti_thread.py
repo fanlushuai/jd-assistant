@@ -8,7 +8,9 @@ from itertools import repeat
 from log import logger
 
 shut_down_pool_queue = queue.Queue()
-sys_thread_pool = ThreadPoolExecutor(max_workers=2)
+
+
+# sys_thread_pool = ThreadPoolExecutor(max_workers=2)
 
 
 def shutdown_listener():
@@ -18,7 +20,25 @@ def shutdown_listener():
         logger.info("shutdown")
 
 
-sys_thread_pool.submit(shutdown_listener)
+# sys_thread_pool.submit(shutdown_listener)
+
+# 根据一系列逻辑，估算出来的整个流程，任务不等待，情况下的合理线程数
+no_task_wait_size_assessed = 35
+concurrent_pool_assessed = ThreadPoolExecutor(max_workers=no_task_wait_size_assessed)
+
+
+def do_nothing():
+    # 休息5s。保证能创建新的线程，而不是复用线程
+    time.sleep(5)
+    return
+
+
+def pre_concurrent_pool():
+    # 预热线程池里的线程
+    t = time.perf_counter()
+    for i in range(no_task_wait_size_assessed):
+        concurrent_pool_assessed.submit(do_nothing)
+    logger.info("预热线程池，耗时%s", time.perf_counter() - t)
 
 
 def threads(concurrent_size=1, try_times=1, try_internal=0.05):
@@ -57,7 +77,8 @@ class Job(object):
         self.try_times = try_times
         self.try_internal = try_internal
         self.futures = []
-        self.thread_pool = ThreadPoolExecutor(max_workers=15)
+        # 整个流程共享这一个线程池
+        self.thread_pool = concurrent_pool_assessed
         self.loop = True
 
     def run(self, fn, *args, **kwargs):
@@ -106,4 +127,5 @@ def test_g():
 
 
 if __name__ == '__main__':
+    pre_concurrent_pool()
     logger.info("拿到结果%s", test_g())

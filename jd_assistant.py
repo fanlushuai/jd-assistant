@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import datetime
 import json
 import os
 import pickle
@@ -16,7 +17,7 @@ from exception import AsstException
 from gun import TimeWait
 from log import logger, http_logger, http_request_url_cookies_logger
 from messenger import Messenger
-from muti_thread import threads
+from muti_thread import threads, pre_concurrent_pool
 from util import (
     DEFAULT_TIMEOUT,
     DEFAULT_USER_AGENT,
@@ -1142,7 +1143,7 @@ class Assistant(object):
         url = self.__get_sec_kill_url(url, headers, payload, sku_id)
         return url
 
-    @threads(concurrent_size=3, try_internal=0.02, try_times=100)
+    @threads(concurrent_size=1, try_internal=0.01, try_times=100)
     def __get_sec_kill_url(self, url, headers, payload, sku_id):
         try:
             resp = self.sess.get(url=url, headers=headers, params=payload)
@@ -1302,7 +1303,7 @@ class Assistant(object):
 
         return self._submit_seckill_order(url, headers, payload, sku_id)
 
-    @threads(concurrent_size=4, try_internal=0.03, try_times=5)
+    @threads(concurrent_size=4, try_internal=0.01, try_times=5)
     def _submit_seckill_order(self, url, headers, payload, sku_id):
         try:
             resp = self.sess.post(url=url, headers=headers, params=payload,
@@ -1375,8 +1376,16 @@ class Assistant(object):
             if not self.seckill_order_data.get(sku_id):
                 self.seckill_order_data[sku_id] = self._gen_seckill_order_data(sku_id, num)
 
+        # 预热线程池。需要花费5s左右的时间预热，所以，购买时间提前7s。进行预热。
+        # 为什么不一启动就预热？因为不知道会不会被gc。python我只是小白。
+        datetime_obj = datetime.datetime.strptime(buy_time, '%Y-%m-%d %H:%M:%S.%f')
+        pre_pool_datetime = datetime_obj + datetime.timedelta(seconds=-7)
+        pre_time_str = pre_pool_datetime.strftime('%Y-%m-%d %H:%M:%S.%f')
+        TimeWait().start_wait_until_time(pre_time_str)
+        pre_concurrent_pool()
+
         # 等待秒杀
-        TimeWait().start_wait_until_time(buy_time, auto_fix=True)
+        TimeWait().start_wait_until_time(buy_time)
 
         # 进入秒杀
         for sku_id in items_dict:
