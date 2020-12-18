@@ -108,7 +108,10 @@ class Assistant(object):
             'rid': str(int(time.time() * 1000)),
         }
         try:
-            resp = self.sess.get(url=url, params=payload, allow_redirects=False)
+            resp = self.sess.get(url=url,
+                                 headers={'dnt': '1', 'sec-fetch-dest': 'document', 'sec-fetch-mode': 'navigate',
+                                          'sec-fetch-site': 'none', 'upgrade-insecure-requests': '1',
+                                          'user-agent': self.user_agent}, params=payload, allow_redirects=False)
             if resp.status_code == requests.codes.OK:
                 return True
         except Exception as e:
