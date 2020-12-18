@@ -8,10 +8,10 @@ CMD_SECTION = 'cmd'
 
 class Config(object):
 
-    def __init__(self, config_file='config.ini', cmd=None):
+    def __init__(self, config_file='./account/config.ini', cmd=None):
         self._path = os.path.join(os.getcwd(), config_file)
         if not os.path.exists(self._path):
-            raise FileNotFoundError("No such file: config.ini")
+            raise FileNotFoundError("config.ini not found from given path {}", config_file)
         self._config = configparser.ConfigParser()
         self._config.read(self._path, encoding='utf-8')
 
@@ -65,5 +65,5 @@ parser.add_argument('--sku.buy_time', type=str, help='购买时间.优先级最�
 
 cmd_args = parser.parse_args()
 
-global_config = Config(config_file=cmd_args.config_file if cmd_args.config_file else 'config.ini',
+global_config = Config(config_file=cmd_args.config_file if cmd_args.config_file else './account/config.ini',
                        cmd=cmd_args).rewrite_by_cmd(cmd_args)

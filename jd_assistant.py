@@ -81,9 +81,9 @@ class Assistant(object):
 
     def _load_cookies(self):
         cookies_file = ''
-        for name in os.listdir('./cookies'):
+        for name in os.listdir('./account/cookies'):
             if name.endswith('.cookies'):
-                cookies_file = './cookies/{0}'.format(name)
+                cookies_file = './account/cookies/{0}'.format(name)
                 break
         with open(cookies_file, 'rb') as f:
             local_cookies = pickle.load(f)
@@ -91,7 +91,7 @@ class Assistant(object):
         self.is_login = self._validate_cookies()
 
     def _save_cookies(self):
-        cookies_file = './cookies/{0}.cookies'.format(self.nick_name)
+        cookies_file = './account/cookies/{0}.cookies'.format(self.nick_name)
         directory = os.path.dirname(cookies_file)
         if not os.path.exists(directory):
             os.makedirs(directory)
@@ -281,7 +281,7 @@ class Assistant(object):
             logger.info('获取二维码失败')
             return False
 
-        QRCode_file = 'QRcode.png'
+        QRCode_file = './account/QRcode.png'
         save_image(resp, QRCode_file)
         logger.info('二维码获取成功，请打开京东APP扫描')
         open_image(QRCode_file)

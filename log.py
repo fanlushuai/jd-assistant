@@ -8,9 +8,9 @@ from datetime import datetime
 now = datetime.now()
 datetimeStr = now.strftime('%Y-%m-%d %H-%M-%S')
 
-LOG_FILENAME = './log/{}-jd-assistant.log'.format(datetimeStr)
-REQUEST_LOG = './log/{}-jd-assistant-request.log'.format(datetimeStr)
-REQUEST_LOG_DETAIL = './log/{}-jd-assistant-request-detail.log'.format(datetimeStr)
+LOG_FILENAME = './account/log{}-jd-assistant.log'.format(datetimeStr)
+REQUEST_LOG = './account/log{}-jd-assistant-request.log'.format(datetimeStr)
+REQUEST_LOG_DETAIL = './account/log{}-jd-assistant-request-detail.log'.format(datetimeStr)
 
 logger = logging.getLogger()
 http_logger = logging.getLogger("http_logger")
