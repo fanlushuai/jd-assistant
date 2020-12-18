@@ -33,8 +33,10 @@ class Config(object):
 
             if not self._config.has_section(section_cmd):
                 self._config.add_section(section_cmd)
-            if getattr(cmd, arg):
+
+            if getattr(cmd, arg) is not None:
                 self._config.set(section_cmd, str(key), str(getattr(cmd, arg)))
+
         return self
 
     def get(self, section, name, strip_blank=True, strip_quote=True):
