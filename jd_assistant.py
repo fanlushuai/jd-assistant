@@ -1387,13 +1387,16 @@ class Assistant(object):
         TimeWait().start_wait_until_time(pre_time_str)
         pre_concurrent_pool()
 
+        # 1608515999
+        server_buy_time = int(time.mktime(datetime_obj.timetuple()))
+
         # 等待秒杀
         TimeWait().start_wait_until_time(buy_time)
 
         # 进入秒杀
         for sku_id in items_dict:
             logger.info('开始抢购商品:%s', sku_id)
-            self.exec_seckill(sku_id, buy_time, num, fast_mode)
+            self.exec_seckill(sku_id, server_buy_time, num, fast_mode)
 
     @check_login
     def exec_reserve_seckill_by_time(self, sku_id, buy_time=None, retry=4, interval=4, num=1, is_pass_cart=False,
